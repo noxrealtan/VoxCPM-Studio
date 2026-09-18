@@ -1,0 +1,16 @@
+# Fichiers locaux generes par VoxCPM Studio
+outputs/
+refs/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+
+# Moteur C++ GGUF (sources, binaire et poids ~3,3 Go, installes par le lanceur)
+gguf/src/
+gguf/bin/
+gguf/models/
+gguf/install_error.txt
+
+# Bundle macOS (reconstruisible via packaging/make_app.sh)
+VoxCPM Studio.app/

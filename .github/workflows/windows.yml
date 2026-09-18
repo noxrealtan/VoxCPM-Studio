@@ -1,0 +1,40 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  exe:
+    name: Build + smoke test VoxCPMStudio.exe
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the .exe
+        shell: cmd
+        run: packaging\build_exe.bat < nul
+
+      - name: The .exe must exist
+        run: |
+          if (-not (Test-Path dist\VoxCPMStudio.exe)) { throw "dist\VoxCPMStudio.exe manquant" }
+          "{0:N1} MB" -f ((Get-Item dist\VoxCPMStudio.exe).Length / 1MB)
+
+      - name: Smoke test the frozen app
+        run: packaging\smoke_test.ps1 -ExePath dist\VoxCPMStudio.exe
+
+      - name: Upload the .exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoxCPMStudio-windows
+          path: dist\VoxCPMStudio.exe
+          if-no-files-found: error

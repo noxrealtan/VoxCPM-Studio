@@ -1,0 +1,13 @@
+# VoxCPM Studio - dependances
+# PyTorch est installe automatiquement comme dependance de voxcpm.
+voxcpm==2.0.3
+soundfile>=0.12.1
+numpy>=1.26,<2.3
+lameenc>=1.7.0
+
+# Fenetre native macOS (sans effet sur Windows/Linux)
+pyobjc-framework-Cocoa>=9.2; sys_platform == "darwin"
+pyobjc-framework-WebKit>=9.2; sys_platform == "darwin"
+
+# Fenêtre native Windows (WebView2, présent sur Windows 10/11 à jour)
+pywebview>=5.0; sys_platform == "win32"
