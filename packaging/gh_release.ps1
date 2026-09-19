@@ -3,6 +3,8 @@
 #  sans installer le CLI gh sur le runner. Utilise par .github/workflows/release.yml
 #  Les notes sont enrichies automatiquement : taille et SHA-256 du binaire tel
 #  que publie, plus le changelog passe via -NotesFile (genere par le workflow).
+#  checksums.txt (manifeste des assets, genere ET verifie par le smoke test)
+#  est publie en second asset depuis le dossier smoke_artifacts.
 #  Exemple :
 #    .\gh_release.ps1 -Tag v0.1.0 -Asset dist\VoxCPMStudio.exe `
 #      -Repo OWNER/REPO -Token $env:GITHUB_TOKEN -NotesFile release_notes.md
@@ -22,7 +24,6 @@ $name  = [System.IO.Path]::GetFileName($Asset)
 $sizeMb = "{0:N1}" -f ($bytes.Length / 1MB)
 $sha = (Get-FileHash -Algorithm SHA256 -Path $Asset).Hash.ToLower()
 Write-Host "Asset : $name ($sizeMb MB, SHA-256 $sha)"
-$checksum = "$sha  $name"  # format type GNU sha256sum : empreinte, deux espaces, nom
 
 # Changelog genere par le workflow depuis le tag precedent ; absent en
 # lancement manuel -> la release est publiee sans section Changements.
@@ -102,8 +103,15 @@ function Add-Asset([string]$fname, [byte[]]$data) {
 }
 
 Add-Asset $name $bytes
-Add-Asset "checksums.txt" ([System.Text.Encoding]::ASCII.GetBytes($checksum))
-foreach ($f in @("packaging\verify_checksum.ps1", "packaging\verifier.bat")) {
+
+# checksums.txt en second asset : manifeste genere et verifie par le smoke
+# test (empreintes du .exe, du verifier embarque et de son lanceur).
+if (Test-Path "smoke_artifacts\checksums.txt") {
+  Add-Asset "checksums.txt" ([System.IO.File]::ReadAllBytes("smoke_artifacts\checksums.txt"))
+} else {
+  throw "smoke_artifacts\checksums.txt manquant : le smoke test a-t-il ete execute ?"
+}
+foreach ($f in @("smoke_artifacts\verify_checksum.ps1", "smoke_artifacts\verifier.bat")) {
   if (Test-Path $f) {
     Add-Asset (Split-Path $f -Leaf) ([System.IO.File]::ReadAllBytes($f))
   } else {

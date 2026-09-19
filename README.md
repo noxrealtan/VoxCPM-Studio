@@ -33,8 +33,10 @@ français), création de voix par description, et clonage vocal à partir d'un c
 > est publié en **release GitHub téléchargeable** attachée au tag. Les notes de release
 > sont enrichies automatiquement : **SHA-256 et taille** du binaire publié, et le
 > **changelog** (commits depuis le tag précédent). Chaque release embarque aussi
-> `checksums.txt` (format `sha256sum`), `verify_checksum.ps1` et `verifier.bat` :
-> sur Windows, placez-les dans le dossier du `.exe` téléchargé puis double-cliquez
+> `checksums.txt` (empreintes SHA-256 de **tous** les assets, format `sha256sum`),
+> `verify_checksum.ps1` et `verifier.bat`. Le manifeste est calculé — puis vérifié
+> par le vérificateur embarqué lui-même — pendant le smoke test en CI, avant publication.
+> Sur Windows, placez-les dans le dossier du `.exe` téléchargé puis double-cliquez
 > sur `verifier.bat` pour vérifier l'empreinte du binaire.
 
 > 🖥️ macOS : si le fichier `.command` est bloqué (Gatekeeper), faites un clic droit → **Ouvrir**.
