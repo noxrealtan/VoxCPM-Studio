@@ -129,6 +129,12 @@ PyPI — alors que `voxcpm` exige PyTorch ≥ 2.5. Conséquence : le moteur Pyth
   health, UI servie, rejet 400 du natif avec message clair, `gguf.available=false`.
   Défauts racine corrigés à cette occasion : `pause` bloquant en CI (désormais hors CI
   uniquement), exclusions torch/voxcpm/numpy et collecte `clr_loader`/`pythonnet` du bundle.
+- **Release par tag (v1.4)** : `.github/workflows/release.yml` — déclenché par tout tag
+  `v*` (et manuellement). Même chaîne que la CI (build `build_exe.bat` + smoke
+  `smoke_test.ps1`), puis `packaging/gh_release.ps1` (REST pur, sans CLI) crée la
+  release GitHub du tag et y attache `VoxCPMStudio.exe` (remplacement si relancé).
+  Lancement manuel : artifact seul, sans publication. *Non exécutable depuis macOS :
+  la première publication réelle vaudra la première preuve, au premier tag poussé.*
 
 ---
 

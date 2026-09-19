@@ -1,0 +1,53 @@
+name: Windows Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build + smoke test + publish VoxCPMStudio.exe
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the .exe
+        shell: cmd
+        run: packaging\build_exe.bat < nul
+
+      - name: The .exe must exist
+        run: |
+          if (-not (Test-Path dist\VoxCPMStudio.exe)) { throw "dist\VoxCPMStudio.exe manquant" }
+          "{0:N1} MB" -f ((Get-Item dist\VoxCPMStudio.exe).Length / 1MB)
+
+      - name: Smoke test the frozen app
+        run: packaging\smoke_test.ps1 -ExePath dist\VoxCPMStudio.exe
+
+      # Lancement manuel (depuis une branche) : artifact seul, pas de release —
+      # une release ne correspond qu'a un tag.
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoxCPMStudio-windows-${{ github.ref_name }}
+          path: dist\VoxCPMStudio.exe
+          if-no-files-found: error
+
+      - name: Create the GitHub release and attach the .exe
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          packaging\gh_release.ps1 -Tag $env:GITHUB_REF_NAME
+          -Asset dist\VoxCPMStudio.exe -Repo $env:GITHUB_REPOSITORY
+          -Token $env:GITHUB_TOKEN

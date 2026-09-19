@@ -28,6 +28,9 @@ français), création de voix par description, et clonage vocal à partir d'un c
 > **Sans PC sous la main** : pousser le dépôt déclenche `.github/workflows/windows.yml`,
 > qui construit le `.exe`, le teste (démarrage, health, UI, rejet natif 400, gguf absent)
 > et le publie en **artifact téléchargeable** (onglet Actions du dépôt).
+> **Release par tag** : pousser un tag `v*` (ex. `git tag v0.1.0 && git push origin v0.1.0`)
+> déclenche `.github/workflows/release.yml` — même build + smoke test, et le `.exe`
+> est publié en **release GitHub téléchargeable** attachée au tag.
 
 > 🖥️ macOS : si le fichier `.command` est bloqué (Gatekeeper), faites un clic droit → **Ouvrir**.
 > Le modèle (~5 Go) est téléchargé depuis HuggingFace lors de la **première génération**.
