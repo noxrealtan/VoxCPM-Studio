@@ -133,6 +133,10 @@ PyPI — alors que `voxcpm` exige PyTorch ≥ 2.5. Conséquence : le moteur Pyth
   `v*` (et manuellement). Même chaîne que la CI (build `build_exe.bat` + smoke
   `smoke_test.ps1`), puis `packaging/gh_release.ps1` (REST pur, sans CLI) crée la
   release GitHub du tag et y attache `VoxCPMStudio.exe` (remplacement si relancé).
+  Notes enrichies automatiquement : **SHA-256 + taille** de l'asset publié (calculés
+  en CI par `Get-FileHash` sur le binaire tel que publié) et **changelog** — commits
+  depuis le tag précédent (`git log --no-merges`), extraits par le workflow avec un
+  checkout `fetch-depth: 0` ; re-tag = notes et asset remplacés, jamais périmés.
   Lancement manuel : artifact seul, sans publication. *Non exécutable depuis macOS :
   la première publication réelle vaudra la première preuve, au premier tag poussé.*
 
