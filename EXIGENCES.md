@@ -139,6 +139,12 @@ PyPI — alors que `voxcpm` exige PyTorch ≥ 2.5. Conséquence : le moteur Pyth
   checkout `fetch-depth: 0` ; re-tag = notes et asset remplacés, jamais périmés.
   Lancement manuel : artifact seul, sans publication. *Non exécutable depuis macOS :
   la première publication réelle vaudra la première preuve, au premier tag poussé.*
+- **Vérification d'intégrité embarquée (v1.5)** : chaque release publie aussi
+  `checksums.txt` (format GNU `sha256sum`), généré par `gh_release.ps1` sur l'asset
+  exact, plus le vérificateur `packaging/verify_checksum.ps1` (code retour scriptable,
+  aide si le `.exe` ou la liste est absente) et son lanceur double-clic
+  `packaging/verifier.bat`. Les notes pointent vers `verifier.bat` ; les quatre
+  assets sont remplacés (jamais doublés) en cas de re-tag.
 
 ---
 

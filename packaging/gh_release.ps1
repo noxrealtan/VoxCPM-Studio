@@ -22,6 +22,7 @@ $name  = [System.IO.Path]::GetFileName($Asset)
 $sizeMb = "{0:N1}" -f ($bytes.Length / 1MB)
 $sha = (Get-FileHash -Algorithm SHA256 -Path $Asset).Hash.ToLower()
 Write-Host "Asset : $name ($sizeMb MB, SHA-256 $sha)"
+$checksum = "$sha  $name"  # format type GNU sha256sum : empreinte, deux espaces, nom
 
 # Changelog genere par le workflow depuis le tag precedent ; absent en
 # lancement manuel -> la release est publiee sans section Changements.
@@ -38,7 +39,8 @@ $notes = @(
   "",
   "## Telechargement",
   "- **VoxCPMStudio.exe** - $sizeMb MB ($($bytes.Length) octets)",
-  "- **SHA-256** : $sha"
+  "- **SHA-256** : $sha",
+  "- Somme de controle : fichier checksums.txt joint (verifiable avec verifier.bat)"
 )
 if ($changelog.Trim()) {
   $notes += ""
@@ -81,18 +83,30 @@ if ($null -eq $release) {
     -ContentType "application/json" -Body $payload | Out-Null
 }
 
-# Un seul upload par release : si un asset du meme nom existe, on le remplace.
+# Assets geres par ce script : remplaces (et non doubles) en cas de re-tag.
+$replaced = @($name, "checksums.txt", "verify_checksum.ps1", "verifier.bat")
 foreach ($a in @($release.assets)) {
-  if ($a.name -eq $name) {
+  if ($replaced -contains $a.name) {
     Write-Host "Asset deja present, suppression avant remplacement..."
     Invoke-RestMethod -Headers $headers -Method Delete `
       -Uri "https://api.github.com/repos/$Repo/releases/assets/$($a.id)" | Out-Null
   }
 }
 
-$upload = Invoke-RestMethod -Method Post `
-  -Uri "https://uploads.github.com/repos/$Repo/releases/$($release.id)/assets?name=$name" `
-  -Headers @{ Authorization = "Bearer $Token"; Accept = "application/vnd.github+json" } `
-  -ContentType "application/octet-stream" -Body $bytes
+function Add-Asset([string]$fname, [byte[]]$data) {
+  $u = Invoke-RestMethod -Method Post `
+    -Uri "https://uploads.github.com/repos/$Repo/releases/$($release.id)/assets?name=$fname" `
+    -Headers @{ Authorization = "Bearer $Token"; Accept = "application/vnd.github+json" } `
+    -ContentType "application/octet-stream" -Body $data
+  Write-Host "Asset publie : $($u.browser_download_url)"
+}
 
-Write-Host "Asset publie : $($upload.browser_download_url)"
+Add-Asset $name $bytes
+Add-Asset "checksums.txt" ([System.Text.Encoding]::ASCII.GetBytes($checksum))
+foreach ($f in @("packaging\verify_checksum.ps1", "packaging\verifier.bat")) {
+  if (Test-Path $f) {
+    Add-Asset (Split-Path $f -Leaf) ([System.IO.File]::ReadAllBytes($f))
+  } else {
+    Write-Host "Verificateur absent : $f (asset non publie)"
+  }
+}

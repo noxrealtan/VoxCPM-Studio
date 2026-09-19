@@ -32,7 +32,10 @@ français), création de voix par description, et clonage vocal à partir d'un c
 > déclenche `.github/workflows/release.yml` — même build + smoke test, et le `.exe`
 > est publié en **release GitHub téléchargeable** attachée au tag. Les notes de release
 > sont enrichies automatiquement : **SHA-256 et taille** du binaire publié, et le
-> **changelog** (commits depuis le tag précédent).
+> **changelog** (commits depuis le tag précédent). Chaque release embarque aussi
+> `checksums.txt` (format `sha256sum`), `verify_checksum.ps1` et `verifier.bat` :
+> sur Windows, placez-les dans le dossier du `.exe` téléchargé puis double-cliquez
+> sur `verifier.bat` pour vérifier l'empreinte du binaire.
 
 > 🖥️ macOS : si le fichier `.command` est bloqué (Gatekeeper), faites un clic droit → **Ouvrir**.
 > Le modèle (~5 Go) est téléchargé depuis HuggingFace lors de la **première génération**.
