@@ -55,7 +55,8 @@ try {
     $tree = Get-TreePids $proc.Id
     if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
       $owner = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-        Where-Object { $tree.Contains([int]$_.OwningProcess) } | Select-Object -First 1
+        Where-Object { $tree.Contains([int]$_.OwningProcess) } | Select-Object -First 1 |
+        ForEach-Object { [PSCustomObject]@{ LocalAddress = "$($_.LocalAddress):$($_.LocalPort)" } }
     } else {
       $owner = (netstat -ano | Select-String "LISTENING") | ForEach-Object {
         $parts = $_.ToString() -split "\s+"
