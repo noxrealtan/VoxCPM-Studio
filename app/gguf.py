@@ -7,8 +7,10 @@ sinon installé par le lanceur (compilation CMake sur Mac Intel).
 """
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 from .state import ROOT, STATE, log
 
@@ -98,13 +100,153 @@ def gpu_status():
             "supported": _GPU_STATE["supported"]}
 
 
+def _wav_format(path):
+    """Tag de format du WAV (octets du chunk fmt), ou None si pas RIFF/WAVE.
+
+    1 = PCM classique (le seul que lit llama.cpp-omni) ; 0xFFFE = extensible
+    (écrit par afconvert et certains logiciels d'enregistrement).
+    """
+    try:
+        with open(path, "rb") as f:
+            data = f.read(64 * 1024)
+        if data[0:4] != b"RIFF" or data[8:12] != b"WAVE":
+            return None
+        i = 12
+        while i + 8 <= len(data):
+            size = int.from_bytes(data[i + 4:i + 8], "little")
+            if data[i:i + 4] == b"fmt ":
+                return int.from_bytes(data[i + 8:i + 10], "little")
+            i += 8 + size + (size & 1)
+    except OSError:
+        pass
+    return None
+
+
+def _canonical_wav(src, dst):
+    """Réécrit un WAV PCM 16 bits au format classique (tag 1, en-tête 44 octets).
+
+    Accepte en entrée un en-tête « extensible » (0xFFFE, sous-format PCM) comme
+    celui qu'écrit afconvert. Renvoie True si la réécriture a réussi.
+    """
+    try:
+        with open(src, "rb") as f:
+            data = f.read()
+        if data[0:4] != b"RIFF" or data[8:12] != b"WAVE":
+            return False
+        i, fmt, payload = 12, None, None
+        while i + 8 <= len(data):
+            size = int.from_bytes(data[i + 4:i + 8], "little")
+            body = data[i + 8:i + 8 + size]
+            if data[i:i + 4] == b"fmt " and fmt is None:
+                fmt = body
+            elif data[i:i + 4] == b"data" and payload is None:
+                payload = body
+            i += 8 + size + (size & 1)
+        if fmt is None or payload is None or len(fmt) < 16:
+            return False
+        audio_format = int.from_bytes(fmt[0:2], "little")
+        channels = int.from_bytes(fmt[2:4], "little")
+        rate = int.from_bytes(fmt[4:8], "little")
+        bits = int.from_bytes(fmt[14:16], "little")
+        is_pcm16 = bits == 16 and channels > 0 and (
+            audio_format == 1
+            or (audio_format == 0xFFFE and len(fmt) >= 40 and fmt[24:26] == b"\x01\x00"))
+        if not is_pcm16 or not payload:
+            return False
+        block = channels * 2
+        head = (b"RIFF" + (36 + len(payload)).to_bytes(4, "little") + b"WAVE"
+                + b"fmt " + (16).to_bytes(4, "little")
+                + (1).to_bytes(2, "little") + channels.to_bytes(2, "little")
+                + rate.to_bytes(4, "little") + (rate * block).to_bytes(4, "little")
+                + block.to_bytes(2, "little") + (16).to_bytes(2, "little")
+                + b"data" + len(payload).to_bytes(4, "little"))
+        tmp = dst + ".canon"
+        with open(tmp, "wb") as f:
+            f.write(head)
+            f.write(payload)
+        os.replace(tmp, dst)
+        return True
+    except (OSError, IndexError):
+        return False
+
+
+def _ensure_wav(ref_path):
+    """Renvoie (chemin WAV à utiliser, fichier temporaire à supprimer ou None).
+
+    Le CLI llama.cpp-omni ne lit que le WAV PCM classique (tag 1) : une
+    référence MP3/M4A/FLAC/OGG est décodée à la volée (ffmpeg si présent,
+    sinon afconvert sur macOS) et tout WAV « extensible » (0xFFFE) est
+    réécrit en en-tête classique. Lève une erreur claire en cas d'échec.
+    """
+    fmt = _wav_format(ref_path)
+    if fmt == 1:
+        return ref_path, None
+    ext = (os.path.splitext(ref_path)[1].lstrip(".") or "audio").upper()
+    fd, tmp = tempfile.mkstemp(prefix="voxcpm_ref_", suffix=".wav")
+    os.close(fd)
+    try:
+        decoded = False
+        if fmt == 0xFFFE:
+            # En-tête extensible PCM 16 bits : réécriture possible sans décodeur
+            decoded = _canonical_wav(ref_path, tmp)
+        if not decoded:
+            ffmpeg = shutil.which("ffmpeg")
+            if ffmpeg:
+                cmd = [ffmpeg, "-y", "-loglevel", "error", "-i", ref_path,
+                       "-c:a", "pcm_s16le", tmp]
+            elif os.access("/usr/bin/afconvert", os.X_OK):
+                cmd = ["/usr/bin/afconvert", "-f", "WAVE", "-d", "LEI16",
+                       ref_path, tmp]
+            else:
+                raise RuntimeError(
+                    "Le moteur GGUF ne lit que des fichiers WAV : la référence %s "
+                    "doit être convertie, mais ni ffmpeg ni afconvert ne sont "
+                    "disponibles. Fournissez un WAV ou installez ffmpeg." % ext
+                )
+            proc = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
+            tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
+            if proc.returncode != 0 or not os.path.isfile(tmp) or os.path.getsize(tmp) == 0:
+                raise RuntimeError("Conversion de la référence %s en WAV impossible : %s"
+                                   % (ext, " | ".join(tail) or "erreur inconnue"))
+        if _wav_format(tmp) != 1 and not _canonical_wav(tmp, tmp):
+            raise RuntimeError(
+                "La référence %s est dans un format WAV non supporté par le moteur "
+                "GGUF : convertissez-la en WAV PCM 16 bits." % ext
+            )
+        return tmp, tmp
+    except BaseException:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
 def generate(model_def, text, control, ref_path, prompt_text, cfg, timesteps, seed,
              out_path, use_gpu=True, progress_cb=None):
     """Synthétise via le CLI voxcpm2-cli et renvoie (sample_rate, duree_s, backend).
 
-    use_gpu=True tente Metal (GPU, y compris AMD via Metal) puis retombe sur CPU
-    automatiquement si le GPU échoue ; l'échec est mémorisé pour la session.
+    Les références non-WAV (MP3/M4A/FLAC) sont transcodées à la volée : le CLI
+    ne lit que le WAV. use_gpu=True tente Metal (GPU, y compris AMD via Metal)
+    puis retombe sur CPU automatiquement si le GPU échoue ; l'échec est
+    mémorisé pour la session.
     """
+    tmp_ref = None
+    try:
+        if ref_path:
+            ref_path, tmp_ref = _ensure_wav(ref_path)
+        return _generate(model_def, text, control, ref_path, prompt_text, cfg,
+                         timesteps, seed, out_path, use_gpu, progress_cb)
+    finally:
+        if tmp_ref:
+            try:
+                os.remove(tmp_ref)
+            except OSError:
+                pass
+
+
+def _generate(model_def, text, control, ref_path, prompt_text, cfg, timesteps, seed,
+              out_path, use_gpu=True, progress_cb=None):
     cli = cli_path()
     if not cli:
         raise RuntimeError("Le moteur GGUF n'est pas installe (gguf/bin/%s absent)." % BIN_NAME)

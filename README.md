@@ -94,6 +94,8 @@ fonctionne donc sur CPU. Sur Apple Silicon, le même chemin GPU doit fonctionner
   tout est automatique ; sur Mac, `auto` utilise le GPU (MPS) quand il est disponible.
 - **Erreur au chargement du modèle** : vérifiez l'espace disque (~8 Go) et la connexion ;
   le bouton « Décharger le modèle » permet de repartir proprement.
+- **Clonage avec une référence M4A/MP3 et le moteur GGUF** : automatique — la référence
+  est convertie en WAV à la volée (ffmpeg, ou afconvert sur macOS) avant la génération.
 - Les audios de référence déposés sont copiés dans `refs/`, les générations dans `outputs/`.
 
 ## 🗂️ Contenu du dossier
