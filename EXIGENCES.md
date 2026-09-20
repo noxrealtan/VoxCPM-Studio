@@ -145,8 +145,18 @@ PyPI — alors que `voxcpm` exige PyTorch ≥ 2.5. Conséquence : le moteur Pyth
   scriptable et son lanceur double-clic `packaging/verifier.bat`). Le manifeste est
   **généré et vérifié par le smoke test** (étapes 5-6) : empreintes calculées après
   le build, round-trip immédiat via le vérificateur embarqué lui-même, puis export
-  via `smoke_artifacts/` ; `gh_release.ps1` refuse de publier sans manifeste. Les
-  quatre assets sont remplacés (jamais doublés) en cas de re-tag.
+  via `smoke_artifacts/` ; `gh_release.ps1` refuse de publier sans manifeste.  Les quatre assets sont remplacés (jamais doublés) en cas de re-tag.
+- **Références vocales non-WAV pour le moteur GGUF (v1.6)** : le CLI
+  `llama.cpp-omni` ne lit que le WAV PCM classique (tag 1) alors que l'app
+  accepte les références M4A/MP3/FLAC/OGG — le clonage avec une référence M4A
+  échouait (« Not a valid WAV file »). `gguf._ensure_wav` décode à la volée
+  (ffmpeg si présent, sinon `afconvert` sur macOS) et réécrit en pur Python
+  l'en-tête « extensible » (0xFFFE) qu'afconvert produit — deuxième couche du
+  bug, découverte au test réel : même converti, le WAV restait refusé
+  (`Unsupported WAV format: fmt=-2`). Messages clairs si ni ffmpeg ni
+  afconvert sont disponibles, ou si le format n'est pas du PCM 16 bits.
+  *Prouvé de bout en bout sur le fichier réel de l'utilisateur : clonage
+  VoxCPM2 GGUF → WAV 48 kHz valide.*
 
 ---
 
