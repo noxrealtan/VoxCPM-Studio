@@ -198,6 +198,17 @@ def run_gguf_generation(job):
         if final_path is None:
             raise RuntimeError("La concatenation multi-segments n'est pas supportee pour ce format.")
 
+        # Durée réelle du fichier final : la valeur renvoyée par le CLI ne
+        # couvre que le dernier segment quand le texte a été découpé.
+        # (Lu avant l'export MP3 éventuel : le WAV est toujours là à ce stade.)
+        try:
+            import wave
+            with wave.open(final_path, "rb") as w:
+                duration = round(w.getnframes() / max(w.getframerate(), 1), 2)
+                sr = w.getframerate()
+        except Exception:
+            pass
+
         final_fmt = "wav"
         if req["mp3"]:
             mp3_path = audio.unique_output_path(base, "mp3", True)
