@@ -1,0 +1,72 @@
+name: Windows Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build + smoke test + publish VoxCPMStudio.exe
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      # Historique complet : le changelog a besoin des tags precedents.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the .exe
+        shell: cmd
+        run: packaging\build_exe.bat < nul
+
+      - name: The .exe must exist
+        run: |
+          if (-not (Test-Path dist\VoxCPMStudio.exe)) { throw "dist\VoxCPMStudio.exe manquant" }
+          "{0:N1} MB" -f ((Get-Item dist\VoxCPMStudio.exe).Length / 1MB)
+
+      - name: Smoke test the frozen app
+        run: packaging\smoke_test.ps1 -ExePath dist\VoxCPMStudio.exe
+
+      # Lancement manuel (depuis une branche) : artifact seul, pas de release —
+      # une release ne correspond qu'a un tag. Sur un tag : commits depuis le
+      # tag precedent (sujets de commits), consommes par gh_release.ps1.
+      - name: Changelog since the previous tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $prev = git tag --sort=-creatordate |
+            Where-Object { $_ -ne $env:GITHUB_REF_NAME } |
+            Select-Object -First 1
+          if ($prev) {
+            Write-Host "Plage du changelog : $prev..$($env:GITHUB_REF_NAME)"
+            $log = git log "$prev..$($env:GITHUB_REF_NAME)" --no-merges --format="- %s (%h)"
+          } else {
+            $log = @("- Premiere version publiee")
+          }
+          $log | Set-Content -Path release_notes.md -Encoding utf8
+          Get-Content release_notes.md
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoxCPMStudio-windows-${{ github.ref_name }}
+          path: dist\VoxCPMStudio.exe
+          if-no-files-found: error
+
+      - name: Create the GitHub release and attach the .exe
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          packaging\gh_release.ps1 -Tag $env:GITHUB_REF_NAME
+          -Asset dist\VoxCPMStudio.exe -Repo $env:GITHUB_REPOSITORY
+          -Token $env:GITHUB_TOKEN -NotesFile release_notes.md

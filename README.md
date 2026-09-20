@@ -1,5 +1,7 @@
 # 🎙️ VoxCPM Studio
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-fluxy73-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/fluxy73)
+
 Application desktop **Windows & macOS** à interface simple pour le moteur TTS open-source
 [VoxCPM](https://github.com/OpenBMB/VoxCPM) (VoxCPM2) : synthèse vocale multilingue (dont le
 français), création de voix par description, et clonage vocal à partir d'un court extrait audio.
@@ -28,6 +30,16 @@ français), création de voix par description, et clonage vocal à partir d'un c
 > **Sans PC sous la main** : pousser le dépôt déclenche `.github/workflows/windows.yml`,
 > qui construit le `.exe`, le teste (démarrage, health, UI, rejet natif 400, gguf absent)
 > et le publie en **artifact téléchargeable** (onglet Actions du dépôt).
+> **Release par tag** : pousser un tag `v*` (ex. `git tag v0.1.0 && git push origin v0.1.0`)
+> déclenche `.github/workflows/release.yml` — même build + smoke test, et le `.exe`
+> est publié en **release GitHub téléchargeable** attachée au tag. Les notes de release
+> sont enrichies automatiquement : **SHA-256 et taille** du binaire publié, et le
+> **changelog** (commits depuis le tag précédent). Chaque release embarque aussi
+> `checksums.txt` (empreintes SHA-256 de **tous** les assets, format `sha256sum`),
+> `verify_checksum.ps1` et `verifier.bat`. Le manifeste est calculé — puis vérifié
+> par le vérificateur embarqué lui-même — pendant le smoke test en CI, avant publication.
+> Sur Windows, placez-les dans le dossier du `.exe` téléchargé puis double-cliquez
+> sur `verifier.bat` pour vérifier l'empreinte du binaire.
 
 > 🖥️ macOS : si le fichier `.command` est bloqué (Gatekeeper), faites un clic droit → **Ouvrir**.
 > Le modèle (~5 Go) est téléchargé depuis HuggingFace lors de la **première génération**.
@@ -97,6 +109,11 @@ fonctionne donc sur CPU. Sur Apple Silicon, le même chemin GPU doit fonctionner
 | `gguf/` | Moteur C++ de secours, sans PyTorch (créé au premier lancement sur Mac Intel) : `gguf/src/` (sources), `gguf/bin/` (binaire + dylibs), `gguf/models/` (poids GGUF ~3,3 Go, installés par le lanceur) |
 | `packaging/` | Bundle macOS `VoxCPM Studio.app` (`make_app.sh`) et **`.exe` Windows** (`build_exe.bat`, `png_to_ico.ps1`) + icône |
 | `EXIGENCES.md` | Analyse du dépôt VoxCPM et exigences de l'application |
+
+## ☕ Soutenir le projet
+
+Si VoxCPM Studio vous est utile, [offrez-moi un café](https://www.buymeacoffee.com/fluxy73) ☕ —
+chaque tasse finance les tests sur de vraies machines et le temps de développement.
 
 Licence : le moteur VoxCPM et ses poids sont sous **Apache-2.0** (usage commercial autorisé).
 À utiliser de façon responsable : ne pas cloner une voix pour usurper l'identité de quelqu'un,

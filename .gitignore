@@ -14,3 +14,7 @@ gguf/install_error.txt
 
 # Bundle macOS (reconstruisible via packaging/make_app.sh)
 VoxCPM Studio.app/
+
+# Fichiers locaux du client (hors perimetre du projet)
+.freebuff/
+stitch_voxcpm_modern_web_studio.zip

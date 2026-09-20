@@ -129,6 +129,24 @@ PyPI — alors que `voxcpm` exige PyTorch ≥ 2.5. Conséquence : le moteur Pyth
   health, UI servie, rejet 400 du natif avec message clair, `gguf.available=false`.
   Défauts racine corrigés à cette occasion : `pause` bloquant en CI (désormais hors CI
   uniquement), exclusions torch/voxcpm/numpy et collecte `clr_loader`/`pythonnet` du bundle.
+- **Release par tag (v1.4)** : `.github/workflows/release.yml` — déclenché par tout tag
+  `v*` (et manuellement). Même chaîne que la CI (build `build_exe.bat` + smoke
+  `smoke_test.ps1`), puis `packaging/gh_release.ps1` (REST pur, sans CLI) crée la
+  release GitHub du tag et y attache `VoxCPMStudio.exe` (remplacement si relancé).
+  Notes enrichies automatiquement : **SHA-256 + taille** de l'asset publié (calculés
+  en CI par `Get-FileHash` sur le binaire tel que publié) et **changelog** — commits
+  depuis le tag précédent (`git log --no-merges`), extraits par le workflow avec un
+  checkout `fetch-depth: 0` ; re-tag = notes et asset remplacés, jamais périmés.
+  Lancement manuel : artifact seul, sans publication. *Non exécutable depuis macOS :
+  la première publication réelle vaudra la première preuve, au premier tag poussé.*
+- **Vérification d'intégrité embarquée (v1.5)** : chaque release publie aussi
+  `checksums.txt` en second asset — manifeste format GNU `sha256sum` des **trois**
+  assets (le `.exe`, le vérificateur `packaging/verify_checksum.ps1` à code retour
+  scriptable et son lanceur double-clic `packaging/verifier.bat`). Le manifeste est
+  **généré et vérifié par le smoke test** (étapes 5-6) : empreintes calculées après
+  le build, round-trip immédiat via le vérificateur embarqué lui-même, puis export
+  via `smoke_artifacts/` ; `gh_release.ps1` refuse de publier sans manifeste. Les
+  quatre assets sont remplacés (jamais doublés) en cas de re-tag.
 
 ---
 
