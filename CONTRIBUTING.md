@@ -1,32 +1,19 @@
-# Workflow PR — VoxCPM Studio
+# Workflow de contribution — VoxCPM Studio
 
 Le dépôt ne reçoit les changements que par **pull request** : `main` reste la
 branche de référence (CI Windows obligatoire), le travail se fait sur une
 branche de fonctionnalité.
 
-## Ouvrir une PR (après `gh auth login`, une seule fois)
-
 ```bash
-git checkout -b feat/ma-fonctionnalité   # depuis main
+git checkout -b feat/ma-fonctionnalite   # depuis main
 # … travail, commits …
-git push -u origin feat/ma-fonctionnalité
+git push -u origin feat/ma-fonctionnalite
 gh pr create --base main --title "…" --body "…"
 ```
 
-## Gabarit de description
-
-```markdown
-## Intention
-Pourquoi ce changement (le « pourquoi », pas le « quoi »).
-
-## Ce qui est prouvé
-- [ ] Build/tests exécutés localement (py_compile + flux API concernés)
-- [ ] CI Windows verte : https://github.com/<propriétaire>/VoxCPM-Studio/actions
-- [ ] Interface testée si l'UI est touchée
-
-## Limites connues
-Ce qui reste non testé et pourquoi (ex. : uniquement vérifiable sur un PC).
-```
+La description de la PR est pré-remplie par le gabarit
+[`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)
+(intention, preuves, limites connues).
 
 ## Règles
 

@@ -1,5 +1,7 @@
 # 🎙️ VoxCPM Studio
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-fluxy73-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/fluxy73)
+
 Application desktop **Windows & macOS** à interface simple pour le moteur TTS open-source
 [VoxCPM](https://github.com/OpenBMB/VoxCPM) (VoxCPM2) : synthèse vocale multilingue (dont le
 français), création de voix par description, et clonage vocal à partir d'un court extrait audio.
@@ -107,6 +109,11 @@ fonctionne donc sur CPU. Sur Apple Silicon, le même chemin GPU doit fonctionner
 | `gguf/` | Moteur C++ de secours, sans PyTorch (créé au premier lancement sur Mac Intel) : `gguf/src/` (sources), `gguf/bin/` (binaire + dylibs), `gguf/models/` (poids GGUF ~3,3 Go, installés par le lanceur) |
 | `packaging/` | Bundle macOS `VoxCPM Studio.app` (`make_app.sh`) et **`.exe` Windows** (`build_exe.bat`, `png_to_ico.ps1`) + icône |
 | `EXIGENCES.md` | Analyse du dépôt VoxCPM et exigences de l'application |
+
+## ☕ Soutenir le projet
+
+Si VoxCPM Studio vous est utile, [offrez-moi un café](https://www.buymeacoffee.com/fluxy73) ☕ —
+chaque tasse finance les tests sur de vraies machines et le temps de développement.
 
 Licence : le moteur VoxCPM et ses poids sont sous **Apache-2.0** (usage commercial autorisé).
 À utiliser de façon responsable : ne pas cloner une voix pour usurper l'identité de quelqu'un,
