@@ -27,19 +27,39 @@ $proc = Start-Process -FilePath $ExePath -WorkingDirectory (Get-Location) `
 $uriBase = $null
 try {
   # --- Découverte du port réellement lié (desktop.py : 8808..8857) ---------
+  # PyInstaller onefile : le .exe lancé est un bootloader parent, c'est son
+  # processus ENFANT qui possède la socket d'écoute — on matche donc contre
+  # l'arbre complet (parent + descendants), pas le seul PID capturé.
+  function Get-TreePids([int]$Root) {
+    $procs = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+      Select-Object ProcessId, ParentProcessId
+    $tree = New-Object System.Collections.Generic.HashSet[int]
+    [void]$tree.Add($Root)
+    $changed = $true
+    while ($changed) {
+      $changed = $false
+      foreach ($p in $procs) {
+        if ($tree.Contains([int]$p.ParentProcessId) -and -not $tree.Contains([int]$p.ProcessId)) {
+          [void]$tree.Add([int]$p.ProcessId); $changed = $true
+        }
+      }
+    }
+    ,$tree
+  }
   $deadline = (Get-Date).AddSeconds($TimeoutSec)
   while (-not $uriBase) {
     if ($proc.HasExited) {
       throw ("Le .exe s'est arrete (code {0}). Sortie : {1}" -f $proc.ExitCode,
         (Get-Content smoke_out.log, smoke_err.log -ErrorAction SilentlyContinue | Out-String))
     }
+    $tree = Get-TreePids $proc.Id
     if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
-      $owner = Get-NetTCPConnection -State Listen -OwningProcess $proc.Id `
-        -ErrorAction SilentlyContinue | Select-Object -First 1
+      $owner = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $tree.Contains([int]$_.OwningProcess) } | Select-Object -First 1
     } else {
       $owner = (netstat -ano | Select-String "LISTENING") | ForEach-Object {
         $parts = $_.ToString() -split "\s+"
-        if ($parts[-1] -eq "$($proc.Id)" -and $parts[2] -match "^127\.0\.0\.1:(\d+)$") {
+        if ($tree.Contains([int]$parts[-1]) -and $parts[2] -match "^127\.0\.0\.1:(\d+)$") {
           [PSCustomObject]@{ LocalAddress = $parts[2] }
         }
       } | Select-Object -First 1
