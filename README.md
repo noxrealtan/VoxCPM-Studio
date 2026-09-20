@@ -1,10 +1,23 @@
 # 🎙️ VoxCPM Studio
 
+[![Latest release](https://img.shields.io/github/v/release/noxrealtan/VoxCPM-Studio?include_prereleases&label=t%C3%A9l%C3%A9chargement&logo=github)](https://github.com/noxrealtan/VoxCPM-Studio/releases/latest)
+[![Windows CI](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/windows.yml/badge.svg)](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/windows.yml)
+[![Platforms](https://img.shields.io/badge/plateformes-Windows%20%7C%20macOS-blue?logo=apple)](https://github.com/noxrealtan/VoxCPM-Studio/releases/latest)
+[![License](https://img.shields.io/badge/licence-Apache--2.0-green.svg)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-fluxy73-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/fluxy73)
 
 Application desktop **Windows & macOS** à interface simple pour le moteur TTS open-source
 [VoxCPM](https://github.com/OpenBMB/VoxCPM) (VoxCPM2) : synthèse vocale multilingue (dont le
 français), création de voix par description, et clonage vocal à partir d'un court extrait audio.
+
+## 📥 Télécharger l'application Windows (.exe)
+
+**Aucune installation** : téléchargez [VoxCPMStudio.exe depuis la dernière release](https://github.com/noxrealtan/VoxCPM-Studio/releases/latest) (≈ 18 Mo, fenêtre native, interface embarquée),
+double-cliquez, et générez. Le fichier `checksums.txt` joint à chaque release permet de vérifier
+l'empreinte SHA-256 du binaire : placez-le à côté de l'.exe avec `verifier.bat` et double-cliquez.
+
+Sur **macOS**, clonez ce dépôt (ou téléchargez-le en ZIP) puis double-cliquez
+`Lancer VoxCPM Studio.command` — tout s'installe automatiquement (voir plus bas).
 
 ## 🚀 Démarrage (un seul double-clic)
 
