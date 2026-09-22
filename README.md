@@ -1,5 +1,7 @@
 # 🎙️ VoxCPM Studio
 
+![Capture d'écran de VoxCPM Studio](docs/screenshot.png)
+
 [![Latest release](https://img.shields.io/github/v/release/noxrealtan/VoxCPM-Studio?include_prereleases&label=t%C3%A9l%C3%A9chargement&logo=github)](https://github.com/noxrealtan/VoxCPM-Studio/releases/latest)
 [![Windows CI](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/windows.yml/badge.svg)](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/windows.yml)
 [![Test suite](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/tests.yml/badge.svg)](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/tests.yml)

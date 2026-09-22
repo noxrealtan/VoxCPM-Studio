@@ -36,6 +36,8 @@ if ($NotesFile -and (Test-Path -LiteralPath $NotesFile)) {
 
 # Corps des notes : empreinte et taille de CE fichier precis, plus le changelog.
 $notes = @(
+  "![Interface de VoxCPM Studio](https://github.com/$Repo/raw/main/docs/screenshot.png)",
+  "",
   "Application Windows autonome (VoxCPMStudio.exe), construite et smoke-testee par GitHub Actions au tag $Tag.",
   "",
   "## Telechargement",
