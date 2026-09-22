@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question ou aide à l'utilisation
+    url: https://github.com/noxrealtan/VoxCPM-Studio/discussions
+    about: >
+      Les questions (« comment faire… », « pourquoi ça ne marche pas chez moi… »),
+      les demandes d'aide au clonage vocal et les retours d'expérience vont dans
+      Discussions. Ouvrez une issue uniquement pour un bug précis ou une
+      fonctionnalité à proposer.
+  - name: Télécharger la dernière version
+    url: https://github.com/noxrealtan/VoxCPM-Studio/releases/latest
+    about: Le .exe Windows, le fichier checksums.txt et le vérificateur sont sur la page de releases.
