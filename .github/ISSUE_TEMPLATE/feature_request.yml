@@ -1,0 +1,35 @@
+name: Demande de fonctionnalité
+description: Proposer une amélioration ou une nouvelle capacité pour VoxCPM Studio
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Une bonne demande part du besoin, pas de la solution imaginée : décrivez
+        le problème que vous rencontrez, l'idée viendra plus clairement.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème à résoudre
+      description: Quel besoin concret n'est pas couvert aujourd'hui ?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposée
+      description: Ce que vous imaginez, en une ou deux phrases.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives envisagées
+      description: D'autres approches ou contournements que vous avez envisagés (facultatif).
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Avant de valider
+      options:
+        - label: J'ai vérifié que cette fonctionnalité n'a pas déjà été demandée (issues et Discussions).
+          required: true

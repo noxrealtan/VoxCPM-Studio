@@ -1,0 +1,63 @@
+name: Rapport de bug
+description: Signaler un plantage ou un comportement incorrect de VoxCPM Studio
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de remplir ce rapport avec précision : un problème reproductible
+        est un problème corrigeable. Pour les questions d'utilisation, passez par
+        [Discussions](https://github.com/noxrealtan/VoxCPM-Studio/discussions).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Que s'est-il passé ?
+      description: Décrivez le comportement observé et le résultat attendu.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Étapes de reproduction
+      description: De quoi a-t-on besoin pour reproduire le problème à coup sûr ?
+      placeholder: |
+        1. Lancer VoxCPM Studio
+        2. Coller le texte « … »
+        3. Choisir le modèle « … »
+        4. Cliquer sur Générer
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version de l'application
+      description: Visible dans le README de la release téléchargée (ex. v0.1.2).
+      placeholder: v0.1.2
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Système d'exploitation
+      options:
+        - Windows
+        - macOS
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Moteur utilisé
+      description: GGUF = moteur C++ llama.cpp-omni ; Natif = moteur PyTorch (voxcpm).
+      options:
+        - GGUF (llama.cpp-omni)
+        - Natif (PyTorch)
+        - Je ne sais pas
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Message d'erreur ou extrait de log
+      description: Copiez-collez le message exact s'il y en a un (ne supprimez rien).
+      render: shell
