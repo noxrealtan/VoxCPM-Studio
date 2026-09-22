@@ -12,7 +12,7 @@ import traceback
 import uuid
 from datetime import datetime
 
-from . import engine
+from . import audio, engine
 from .state import HISTORY_LIMIT, MAX_TEXT_CHARS, REFS_DIR, STATE, log
 from .text import split_text
 
@@ -50,10 +50,10 @@ def params_from_payload(payload):
 
 def _save_reference(payload, params):
     """Décode la référence audio base64 dans refs/ ; lève en cas d'illisibilité."""
-    ref_b64 = payload.get("reference_b64") or ""
+    ref_b64 = "".join((payload.get("reference_b64") or "").split())
     if not ref_b64:
         return
-    raw = base64.b64decode(ref_b64)
+    raw = base64.b64decode(ref_b64, validate=True)  # leve si corrompu (binascii.Error)
     ext = os.path.splitext(payload.get("reference_filename") or "ref.wav")[1].lstrip(".").lower()
     if ext not in ("wav", "mp3", "flac", "ogg", "m4a", "aiff", "aif"):
         ext = "wav"

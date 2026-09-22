@@ -2,6 +2,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/noxrealtan/VoxCPM-Studio?include_prereleases&label=t%C3%A9l%C3%A9chargement&logo=github)](https://github.com/noxrealtan/VoxCPM-Studio/releases/latest)
 [![Windows CI](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/windows.yml/badge.svg)](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/windows.yml)
+[![Test suite](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/tests.yml/badge.svg)](https://github.com/noxrealtan/VoxCPM-Studio/actions/workflows/tests.yml)
 [![Platforms](https://img.shields.io/badge/plateformes-Windows%20%7C%20macOS-blue?logo=apple)](https://github.com/noxrealtan/VoxCPM-Studio/releases/latest)
 [![License](https://img.shields.io/badge/licence-Apache--2.0-green.svg)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-fluxy73-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/fluxy73)
