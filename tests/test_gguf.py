@@ -127,6 +127,15 @@ class ModelsStatusTest(unittest.TestCase):
         p = gguf.cli_path()
         self.assertTrue(p is None or os.path.isfile(p))
 
+    def test_gpu_backend_name_per_platform(self):
+        """macOS -> Metal ; ailleurs (Windows) -> Vulkan (backend amont)."""
+        import sys as _sys
+        expected = "Metal" if _sys.platform == "darwin" else "Vulkan"
+        self.assertEqual(gguf.GPU_BACKEND_NAME, expected)
+        self.assertEqual(gguf.gpu_status()["backend"], expected)
+        self.assertIn("attempted", gguf.gpu_status())
+        self.assertIn("supported", gguf.gpu_status())
+
 
 @unittest.skipUnless(GGUF_AVAILABLE, "moteur GGUF non installe sur cette machine")
 class InstalledModelsTest(unittest.TestCase):
