@@ -207,8 +207,12 @@ class GpuProbeTest(unittest.TestCase):
         self.assertEqual(gguf._PROBE_STATE["phase"], "idle")
 
     def test_probe_starts_and_completes_on_windows(self):
+        # La CI n'a ni binaire ni modeles : la sonde ne doit tourner que si
+        # les deux existent — on les simule donc explicitement ici.
         with mock.patch("app.gguf.sys.platform", "win32"), \
              mock.patch.object(gguf.threading, "Thread", _InlineThread), \
+             mock.patch.object(gguf, "cli_path", return_value="/fake/cli"), \
+             mock.patch.object(gguf, "installed_models", return_value=[self.MODEL]), \
              mock.patch.object(gguf, "_run_probe_cli", return_value=True) as run:
             gguf.start_gpu_probe()
         run.assert_called_once()
