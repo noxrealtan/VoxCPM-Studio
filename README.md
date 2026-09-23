@@ -69,8 +69,10 @@ Ce n'est pas bloquant : le lanceur installe alors automatiquement le **moteur C+
 lancement comprend une compilation (~5–20 min) et ~3,3 Go de poids à télécharger ;
 génération testée à environ **2× la durée audio** en RTF (ex. : 30 s de voix ≈ 1 min).
 
-**GPU** : le moteur tente d'abord **Metal** (le GPU du Mac, AMD inclus, y accède via Metal),
-puis retombe automatiquement sur CPU si le GPU échoue — l'échec est mémorisé et le statut
+**GPU** : le moteur tente d'abord le GPU du binaire C++ — **Metal** sur macOS (le GPU du
+Mac, AMD inclus, y accède via Metal), **Vulkan** sous Windows (backend par défaut des
+binaires llama.cpp-omni, avec tout GPU compatible : NVIDIA, AMD, Intel) — puis retombe
+automatiquement sur CPU si le GPU échoue ; l'échec est mémorisé et le statut
 dans l'interface l'indique clairement. Mesuré sur un iMac Intel 2017 (Radeon Pro 575) :
 le Metal de ce GPU trop ancien ne supporte pas les opérations nécessaires ; l'application
 fonctionne donc sur CPU. Sur Apple Silicon, le même chemin GPU doit fonctionner nativement.

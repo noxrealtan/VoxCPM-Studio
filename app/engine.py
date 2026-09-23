@@ -49,8 +49,10 @@ def torch_info(force=False):
 
 
 def resolve_device(requested):
-    """device=auto -> cuda, mps, cpu (meme ordre que la doc VoxCPM).
-    Sur Mac Intel, torch_info() est vide : le device auto devient le moteur GGUF."""
+    """Device du moteur NATIF PyTorch : device=auto -> cuda, mps, cpu
+    (meme ordre que la doc VoxCPM). Le moteur GGUF, lui, gere son propre
+    backend GPU (Metal/Vulkan) : il n'utilise jamais cette fonction.
+    """
     if requested and requested not in ("auto", ""):
         return requested
     ti = torch_info()
@@ -58,8 +60,6 @@ def resolve_device(requested):
         return "cuda"
     if ti.get("mps"):
         return "mps"
-    if ti.get("torch") is None and gguf.available():
-        return "gguf (CPU)"
     return "cpu"
 
 

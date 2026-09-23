@@ -105,8 +105,11 @@ PyPI — alors que `voxcpm` exige PyTorch ≥ 2.5. Conséquence : le moteur Pyth
   par le lanceur macOS, aucune dépendance Python. Modèles `gguf:*` proposés dans l'UI.
 - Prouvé sur cette machine (iMac Intel, CPU) : compilation, synthèse 0.5B et VoxCPM2,
   clonage par référence, repli MP3→WAV.
-- GPU : tentative Metal automatique (GPU AMD/Intel/Nvidia du Mac via Metal) avec repli CPU
-  mémorisé — sur la Radeon Pro 575 de l'iMac testé, le backend Metal de ggml aborte sur des
+- GPU : tentative GPU automatique avec repli CPU mémorisé — **Metal** sur macOS (GPU
+  AMD/Intel/Nvidia du Mac via Metal), **Vulkan** sous Windows (backend par défaut des
+  binaires llama.cpp-omni, tout GPU compatible NVIDIA/AMD/Intel). Le backend attendu est
+  déduit de la plateforme (`gguf.GPU_BACKEND_NAME`) et exposé dans `/api/health` et l'UI.
+  Sur la Radeon Pro 575 de l'iMac testé, le backend Metal de ggml aborte sur des
   ops non supportées (RMS_NORM/MUL_MAT) ; le repli a été prouvé de bout en bout.
 
 ### R7 — Ajout v1.2 : application de bureau native (macOS et Windows)

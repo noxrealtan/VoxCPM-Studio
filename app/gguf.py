@@ -18,6 +18,12 @@ GGUF_DIR = os.path.join(ROOT, "gguf")
 BIN_NAME = "voxcpm2-cli.exe" if sys.platform == "win32" else "voxcpm2-cli"
 REPO = "https://github.com/tc-mb/llama.cpp-omni"
 
+# Backend GPU du binaire : déduit de la plateforme (le CLI ne l'expose pas).
+# macOS -> Metal (seul backend compilé pour ce binaire) ; ailleurs (Windows)
+# Vulkan est le backend par défaut du projet amont (GGML_VULKAN=ON), avec
+# repli CPU automatique si le GPU échoue ou n'a pas assez de VRAM.
+GPU_BACKEND_NAME = "Metal" if sys.platform == "darwin" else "Vulkan"
+
 GGUF_MODELS = [
     {"id": "gguf:VoxCPM2-BaseLM-Q8_0", "label": "VoxCPM2 GGUF Q8_0 (2B, 30 langues, 48 kHz)",
      "info": "Moteur C++ (llama.cpp-omni) — fonctionne sans PyTorch. Recommande.",
@@ -96,7 +102,8 @@ _GPU_STATE = {"supported": None}
 
 
 def gpu_status():
-    return {"attempted": _GPU_STATE["supported"] is not None,
+    return {"backend": GPU_BACKEND_NAME,
+            "attempted": _GPU_STATE["supported"] is not None,
             "supported": _GPU_STATE["supported"]}
 
 
@@ -276,14 +283,14 @@ def _generate(model_def, text, control, ref_path, prompt_text, cfg, timesteps, s
 
     try_gpu = use_gpu and _GPU_STATE["supported"] is not False
     if try_gpu:
-        log("GGUF : tentative GPU (Metal)...")
+        log("GGUF : tentative GPU (%s)..." % GPU_BACKEND_NAME)
         code, ok = _run_cli(base_cmd, out_path, gpu=True)
         if ok:
             _GPU_STATE["supported"] = True
-            STATE.gguf_backend = "GPU (Metal)"
+            STATE.gguf_backend = "GPU (%s)" % GPU_BACKEND_NAME
         else:
             _GPU_STATE["supported"] = False
-            log("GGUF : le GPU a echoue (ops Metal non supportees ?) -> repli CPU automatique.")
+            log("GGUF : le GPU a echoue (pilote/VRAM insuffisante ?) -> repli CPU automatique.")
     else:
         STATE.gguf_backend = "CPU"
 
