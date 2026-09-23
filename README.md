@@ -73,7 +73,9 @@ génération testée à environ **2× la durée audio** en RTF (ex. : 30 s de vo
 Mac, AMD inclus, y accède via Metal), **Vulkan** sous Windows (backend par défaut des
 binaires llama.cpp-omni, avec tout GPU compatible : NVIDIA, AMD, Intel) — puis retombe
 automatiquement sur CPU si le GPU échoue ; l'échec est mémorisé et le statut
-dans l'interface l'indique clairement. Mesuré sur un iMac Intel 2017 (Radeon Pro 575) :
+dans l'interface l'indique clairement. Sous Windows, le GPU est **testé au démarrage** de
+l'application (mini-génération silencieuse, 60 s max) : le verdict s'affiche dans
+l'interface et la première génération part directement vers le bon backend. Mesuré sur un iMac Intel 2017 (Radeon Pro 575) :
 le Metal de ce GPU trop ancien ne supporte pas les opérations nécessaires ; l'application
 fonctionne donc sur CPU. Sur Apple Silicon, le même chemin GPU doit fonctionner nativement.
 

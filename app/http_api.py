@@ -183,6 +183,7 @@ class Handler(BaseHTTPRequestHandler):
 def start_server(port):
     """Démarre le serveur dans un thread (mode fenêtre native)."""
     jobs.start_worker()
+    gguf.start_gpu_probe()
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     httpd.daemon_threads = True
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
@@ -226,6 +227,7 @@ def main():
     port = find_port(port)
 
     jobs.start_worker()
+    gguf.start_gpu_probe()
 
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     httpd.daemon_threads = True
