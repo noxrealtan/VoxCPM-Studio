@@ -1,8 +1,10 @@
-"""Tests des helpers WAV du moteur GGUF (format, canonisation, transcodage)."""
+"""Tests des helpers WAV du moteur GGUF (format, canonisation, transcodage, sonde GPU)."""
 import os
 import subprocess
 import tempfile
+import threading
 import unittest
+from unittest import mock
 
 from app import gguf
 from app.gguf import _canonical_wav, _ensure_wav, _wav_format, _wav_sample_rate
@@ -149,3 +151,126 @@ class InstalledModelsTest(unittest.TestCase):
 
     def test_status_reports_available(self):
         self.assertTrue(gguf.status()["available"])
+
+
+class _InlineThread:
+    """Remplace threading.Thread pour executer la cible de façon déterministe."""
+
+    def __init__(self, target, args=(), daemon=None):
+        self._target, self._args = target, args
+
+    def start(self):
+        self._target(*self._args)
+
+
+class GpuProbeTest(unittest.TestCase):
+    """Sonde GPU au démarrage : règles de déclenchement, verdicts, concurrence.
+
+    Tout est doublé (CLI, processus) : ces tests ne dépendent ni du binaire
+    ni d'un GPU et tournent en CI comme sur toute machine.
+    """
+
+    MODEL = {"id": "gguf:VoxCPM-0.5B-BaseLM-Q8_0",
+             "baselm": "a.gguf", "acoustic": "b.gguf"}
+
+    def setUp(self):
+        self._saved = (gguf._GPU_STATE["supported"], gguf._PROBE_STATE["phase"])
+        gguf._GPU_STATE["supported"] = None
+        gguf._PROBE_STATE["phase"] = "idle"
+        self.addCleanup(self._restore)
+
+    def _restore(self):
+        gguf._GPU_STATE["supported"], gguf._PROBE_STATE["phase"] = self._saved
+
+    def test_status_exposes_probe_phase(self):
+        gguf._PROBE_STATE["phase"] = "running"
+        self.assertEqual(gguf.gpu_status()["probe"], "running")
+
+    def test_noop_on_macos(self):
+        gguf.start_gpu_probe()
+        self.assertEqual(gguf._PROBE_STATE["phase"], "idle")
+
+    def test_noop_when_verdict_already_known(self):
+        gguf._GPU_STATE["supported"] = False
+        with mock.patch("app.gguf.sys.platform", "win32"):
+            gguf.start_gpu_probe()
+        self.assertEqual(gguf._PROBE_STATE["phase"], "idle")
+
+    def test_noop_without_cli_or_models(self):
+        with mock.patch("app.gguf.sys.platform", "win32"), \
+             mock.patch.object(gguf, "cli_path", return_value=None):
+            gguf.start_gpu_probe()
+        self.assertEqual(gguf._PROBE_STATE["phase"], "idle")
+        with mock.patch("app.gguf.sys.platform", "win32"), \
+             mock.patch.object(gguf, "installed_models", return_value=[]):
+            gguf.start_gpu_probe()
+        self.assertEqual(gguf._PROBE_STATE["phase"], "idle")
+
+    def test_probe_starts_and_completes_on_windows(self):
+        with mock.patch("app.gguf.sys.platform", "win32"), \
+             mock.patch.object(gguf.threading, "Thread", _InlineThread), \
+             mock.patch.object(gguf, "_run_probe_cli", return_value=True) as run:
+            gguf.start_gpu_probe()
+        run.assert_called_once()
+        self.assertEqual(gguf._GPU_STATE["supported"], True)
+        self.assertEqual(gguf._PROBE_STATE["phase"], "done")
+        self.assertEqual(gguf.STATE.gguf_backend, "GPU (%s)" % gguf.GPU_BACKEND_NAME)
+
+    def test_probe_failure_records_cpu(self):
+        with mock.patch.object(gguf, "_run_probe_cli", return_value=False):
+            gguf._probe_worker(self.MODEL)
+        self.assertEqual(gguf._GPU_STATE["supported"], False)
+        self.assertEqual(gguf._PROBE_STATE["phase"], "done")
+        self.assertEqual(gguf.STATE.gguf_backend, "CPU")
+
+    def test_probe_timeout_counts_as_unavailable(self):
+        with mock.patch.object(gguf.subprocess, "run",
+                               side_effect=subprocess.TimeoutExpired(cmd="cli", timeout=60)):
+            self.assertFalse(gguf._run_probe_cli(self.MODEL, "/tmp/x.wav", 60))
+
+    def test_probe_cleans_temp_file(self):
+        fd, out = tempfile.mkstemp(prefix="voxcpm_probe_test_", suffix=".wav")
+        os.close(fd)
+        os.remove(out)
+        with mock.patch.object(gguf.tempfile, "mkstemp", return_value=(fd, out)), \
+             mock.patch.object(gguf, "_run_probe_cli", return_value=True):
+            gguf._probe_worker(self.MODEL)
+        self.assertFalse(os.path.exists(out))
+
+    def test_generate_waits_for_running_probe(self):
+        done = {"finished": False}
+
+        def fake_run_cli(cmd, out_path, gpu=False):
+            return 0, True
+
+        def gen():
+            gguf._generate(self.MODEL, "Bonjour", "", None, "", 2.0, 4, None,
+                           "/tmp/out.wav", use_gpu=False)
+            done["finished"] = True
+
+        gguf._PROBE_STATE["phase"] = "running"
+        with mock.patch.object(gguf, "cli_path", return_value="/fake/cli"), \
+             mock.patch.object(gguf, "_run_cli", fake_run_cli):
+            t = threading.Thread(target=gen)
+            t.start()
+            t.join(0.4)
+            self.assertFalse(done["finished"],
+                             "_generate n'a pas attendu la fin de la sonde")
+            gguf._PROBE_STATE["phase"] = "done"
+            t.join(2)
+            self.assertTrue(done["finished"])
+
+    def test_generate_after_failed_probe_goes_straight_to_cpu(self):
+        gguf._GPU_STATE["supported"] = False
+        calls = []
+
+        def fake_run_cli(cmd, out_path, gpu=False):
+            calls.append(gpu)
+            return 0, True
+
+        with mock.patch.object(gguf, "cli_path", return_value="/fake/cli"), \
+             mock.patch.object(gguf, "_run_cli", fake_run_cli):
+            gguf._generate(self.MODEL, "Bonjour", "", None, "", 2.0, 4, None,
+                           "/tmp/out.wav", use_gpu=True)
+        self.assertEqual(calls, [False],
+                         "une tentative GPU ne doit pas être relancée après un échec connu")

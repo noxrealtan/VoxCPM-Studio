@@ -531,7 +531,9 @@ async function refreshHealth(){
       dot.className = "lamp ok";
       const g = h.gguf.gpu || {};
       $("statusTxt").textContent = "Prêt — moteur C++ GGUF" +
-        (g.supported === true ? " (GPU " + (g.backend || "") + ")" : g.supported === false ? " (CPU)" : "");
+        (g.supported === true ? " (GPU " + (g.backend || "") + ")"
+        : g.supported === false ? " (CPU)"
+        : g.probe === "running" ? " (test GPU en cours…)" : "");
     }
     else { dot.className = "lamp"; $("statusTxt").textContent = "Modèle non chargé (se charge à la 1re génération)"; }
     let devTxt = h.device_hint === "cuda" ? "GPU CUDA" : h.device_hint === "mps" ? "GPU Mac (MPS)"
@@ -553,6 +555,7 @@ async function refreshHealth(){
       line = "Moteur C++ (llama.cpp-omni) : prêt · " + h.gguf.models.length + " modèle(s) GGUF" +
         (g.supported === true ? " · GPU : " + gname
         : g.supported === false ? " · " + gname + " indisponible, repli CPU"
+        : g.probe === "running" ? " · test GPU " + gname + " en cours…"
         : " · GPU " + gname + " : essayé à la 1re génération");
     } else {
       line = "PyTorch : " + (rt.torch || "absent") +

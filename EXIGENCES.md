@@ -109,6 +109,11 @@ PyPI — alors que `voxcpm` exige PyTorch ≥ 2.5. Conséquence : le moteur Pyth
   AMD/Intel/Nvidia du Mac via Metal), **Vulkan** sous Windows (backend par défaut des
   binaires llama.cpp-omni, tout GPU compatible NVIDIA/AMD/Intel). Le backend attendu est
   déduit de la plateforme (`gguf.GPU_BACKEND_NAME`) et exposé dans `/api/health` et l'UI.
+  **Sonde GPU au démarrage (v1.7)** : hors macOS, `start_gpu_probe()` lance une
+  mini-génération silencieuse (modèle le plus léger, timesteps réduits, 60 s max) en
+  arrière-plan et mémorise le verdict — `/api/health` expose la phase (`probe`), l'UI
+  affiche « test GPU en cours… », la première génération part directement vers le bon
+  backend. macOS : pas de sonde (Metal testé paresseusement, comportement validé).
   Sur la Radeon Pro 575 de l'iMac testé, le backend Metal de ggml aborte sur des
   ops non supportées (RMS_NORM/MUL_MAT) ; le repli a été prouvé de bout en bout.
 

@@ -11,6 +11,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 
 from .state import ROOT, STATE, log
 
@@ -96,15 +98,81 @@ def version_from_source():
 _LAST_LOG = []
 
 # Résultat du dernier essai GPU pour cette session : None (inconnu), True (ok), False (échec).
-# Un échec GPU (ops Metal non supportées sur certains GPU) est mémorisé pour ne pas
+# Un échec GPU (ops non supportées, VRAM insuffisante) est mémorisé pour ne pas
 # retenter inutilement à chaque génération — le repli CPU est automatique.
 _GPU_STATE = {"supported": None}
+
+# Sonde GPU au démarrage : phase idle -> running -> done (voir start_gpu_probe).
+_PROBE_STATE = {"phase": "idle"}
+
+# Durée max d'une sonde (chargement du modèle + mini-génération) ; borne aussi
+# l'attente éventuelle d'une génération qui arrive pendant la sonde.
+PROBE_TIMEOUT_S = 60
 
 
 def gpu_status():
     return {"backend": GPU_BACKEND_NAME,
             "attempted": _GPU_STATE["supported"] is not None,
-            "supported": _GPU_STATE["supported"]}
+            "supported": _GPU_STATE["supported"],
+            "probe": _PROBE_STATE["phase"]}
+
+
+def start_gpu_probe():
+    """Sonde le GPU une fois par session au démarrage (Vulkan sous Windows/Linux).
+
+    Lance en arrière-plan une mini-génération silencieuse (modèle le plus léger
+    installé, timesteps réduits, 60 s max) et mémorise le verdict dans
+    _GPU_STATE : la première vraie génération sait alors immédiatement si le
+    GPU est utilisable, et /api/health l'affiche.
+    macOS : pas de sonde — Metal est testé paresseusement à la 1re génération
+    (comportement validé sur ce projet, aucune régression souhaitée).
+    """
+    if sys.platform == "darwin":
+        return
+    if _GPU_STATE["supported"] is not None or _PROBE_STATE["phase"] != "idle":
+        return
+    models = installed_models()
+    if not cli_path() or not models:
+        return
+    model = next((m for m in models if "0.5B" in m["id"]), models[0])
+    _PROBE_STATE["phase"] = "running"
+    threading.Thread(target=_probe_worker, args=(model,), daemon=True).start()
+
+
+def _run_probe_cli(model_def, out_path, timeout_s):
+    """Une invocation GPU du CLI pour la sonde. Renvoie True si audio produit."""
+    cmd = _base_command(model_def, "Essai.", out_path, 2.0, 4)
+    try:
+        proc = subprocess.run(cmd, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        log("GGUF : sonde GPU %s : delai depasse (%ds) -> GPU suppose indisponible."
+            % (GPU_BACKEND_NAME, timeout_s))
+        return False
+    return proc.returncode == 0 and os.path.isfile(out_path)
+
+
+def _probe_worker(model_def):
+    out = None
+    try:
+        fd, out = tempfile.mkstemp(prefix="voxcpm_probe_", suffix=".wav")
+        os.close(fd)
+        os.remove(out)  # le CLI doit creer le sien
+        ok = _run_probe_cli(model_def, out, PROBE_TIMEOUT_S)
+        _GPU_STATE["supported"] = ok
+        STATE.gguf_backend = ("GPU (%s)" % GPU_BACKEND_NAME) if ok else "CPU"
+        log("GGUF : sonde GPU %s : %s" % (GPU_BACKEND_NAME,
+            "GPU actif" if ok else "indisponible, CPU sera utilise"))
+    except Exception as e:
+        _GPU_STATE["supported"] = False
+        log("GGUF : sonde GPU en erreur (%s) -> CPU." % e)
+    finally:
+        if out:
+            try:
+                os.remove(out)
+            except OSError:
+                pass
+        _PROBE_STATE["phase"] = "done"
 
 
 def _wav_format(path):
@@ -252,6 +320,23 @@ def generate(model_def, text, control, ref_path, prompt_text, cfg, timesteps, se
                 pass
 
 
+def _base_command(model_def, text, out_path, cfg, timesteps, seed=None):
+    """Contrat CLI partagé par les générations et la sonde GPU."""
+    mdir = os.path.join(GGUF_DIR, "models")
+    cmd = [
+        cli_path(),
+        "-t", text,
+        "-o", out_path,
+        "--cfg", "%.2f" % cfg,
+        "--timesteps", str(int(timesteps)),
+        os.path.join(mdir, model_def["baselm"]),
+        os.path.join(mdir, model_def["acoustic"]),
+    ]
+    if seed is not None:
+        cmd += ["--seed", str(int(seed))]
+    return cmd
+
+
 def _generate(model_def, text, control, ref_path, prompt_text, cfg, timesteps, seed,
               out_path, use_gpu=True, progress_cb=None):
     cli = cli_path()
@@ -261,22 +346,16 @@ def _generate(model_def, text, control, ref_path, prompt_text, cfg, timesteps, s
     # Voice design : description entre parentheses au debut du texte (reco officielle)
     full_text = "(%s)%s" % (control, text) if control else text
 
-    mdir = os.path.join(GGUF_DIR, "models")
-    base_cmd = [
-        cli,
-        "-t", full_text,
-        "-o", out_path,
-        "--cfg", "%.2f" % cfg,
-        "--timesteps", str(int(timesteps)),
-        os.path.join(mdir, model_def["baselm"]),
-        os.path.join(mdir, model_def["acoustic"]),
-    ]
+    # Une sonde GPU en cours : attendre son verdict (borne par PROBE_TIMEOUT_S)
+    # plutôt que de lancer un second processus GPU concurrent.
+    while _PROBE_STATE["phase"] == "running":
+        time.sleep(0.2)
+
+    base_cmd = _base_command(model_def, full_text, out_path, cfg, timesteps, seed)
     if ref_path and prompt_text:
         base_cmd += ["--prompt-wav", ref_path, "--prompt-text", prompt_text]
     elif ref_path:
         base_cmd += ["-r", ref_path]
-    if seed is not None:
-        base_cmd += ["--seed", str(int(seed))]
 
     if progress_cb:
         progress_cb("generation")
