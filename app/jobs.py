@@ -11,10 +11,16 @@ import time
 import traceback
 import uuid
 from datetime import datetime
+import math
 
 from . import audio, engine
-from .state import HISTORY_LIMIT, MAX_TEXT_CHARS, REFS_DIR, STATE, log
+from .state import (HISTORY_LIMIT, MAX_TEXT_CHARS, REFS_DIR, STATE, log)
 from .text import split_text
+
+# Bornes de qualité audio : l'UI borne déjà, la borne serveur couvre les
+# appels directs a l'API (CSRF ou script local) et les valeurs degeneres.
+CFG_MIN, CFG_MAX = 1.0, 6.0
+STEPS_MIN, STEPS_MAX = 2, 60
 
 
 # ---------------------------------------------------------------------------
@@ -30,12 +36,25 @@ def params_from_payload(payload):
             seed = None
     else:
         seed = None
+    # clamps : pas de NaN, pas d'infini, bornes larges (pas de DoS/planter le moteur)
+    try:
+        cfg = float(payload.get("cfg", 2.0))
+    except (TypeError, ValueError):
+        cfg = 2.0
+    cfg = min(max(cfg, CFG_MIN), CFG_MAX)
+    if not math.isfinite(cfg):
+        cfg = 2.0
+    try:
+        steps = int(payload.get("timesteps", 10))
+    except (TypeError, ValueError):
+        steps = 10
+    steps = min(max(steps, STEPS_MIN), STEPS_MAX)
     return {
         "text": payload.get("text", ""),
         "control": payload.get("control", ""),
         "prompt_text": payload.get("prompt_text", ""),
-        "cfg": float(payload.get("cfg", 2.0)),
-        "timesteps": int(payload.get("timesteps", 10)),
+        "cfg": cfg,
+        "timesteps": steps,
         "seed": seed,
         "normalize": bool(payload.get("normalize", False)),
         "denoise": bool(payload.get("denoise", False)),
@@ -220,8 +239,11 @@ def worker_loop():
                 continue
             wants_gguf = engine.is_gguf_model(job["request"]["model_id"])
             if wants_gguf and STATE.gguf_job is not None:
-                # le moteur C++ n'admet qu'une instance : reenfiler jusqu'a liberte
+                # le moteur C++ n'admet qu'une instance : attendre sa liberation
+                # (Event au lieu d'un re-enfilement qui faisait tourner le CPU)
+                STATE.gguf_free.clear()
                 STATE.job_queue.put(job_id)
+                STATE.gguf_free.wait()
                 continue
         job["status"] = "running"
         job["started"] = time.time()
@@ -245,6 +267,7 @@ def worker_loop():
             with STATE.lock:
                 if STATE.gguf_job is job:
                     STATE.gguf_job = None
+                    STATE.gguf_free.set()
 
 
 def start_worker():

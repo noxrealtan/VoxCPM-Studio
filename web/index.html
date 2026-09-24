@@ -679,11 +679,22 @@ function addHistory(res){
   if(box.querySelector(".hint")) box.innerHTML = "";
   const item = document.createElement("div");
   item.className = "hist-item";
-  const name = res.output_path.split(/[\\/]/).pop();
-  item.innerHTML = '<div><div style="font-weight:600">' + name + '</div>' +
-    '<div class="meta">' + res.duration + ' s · ' + res.output_format.toUpperCase() +
-    ' · ' + (res.model_id || "").split("/")[1] + '</div></div>' +
-    '<div class="row"><a href="' + res.download_url + '">Enregistrer</a></div>';
+  const main = document.createElement("div");
+  const name = document.createElement("div");
+  name.style.fontWeight = "600";
+  name.textContent = res.output_path.split(/[\\/]/).pop();
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = res.duration + " s · " + res.output_format.toUpperCase() +
+    " · " + (res.model_id || "").split("/")[1];
+  main.append(name, meta);
+  const row = document.createElement("div");
+  row.className = "row";
+  const link = document.createElement("a");
+  link.href = res.download_url;
+  link.textContent = "Enregistrer";
+  row.append(link);
+  item.append(main, row);
   box.prepend(item);
   while(box.children.length > 8) box.lastChild.remove();
 }

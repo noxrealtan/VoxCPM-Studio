@@ -73,3 +73,33 @@ class SiblingModulesBoundTest(unittest.TestCase):
 
     def test_native_save_output_reachable(self):
         self.assertTrue(callable(jobs.audio.save_output))
+
+
+class ParamsClampTest(unittest.TestCase):
+    """S6 : bornes serveur sur cfg/timesteps (l'UI borne deja, l'API doit aussi)."""
+
+    def test_cfg_bounded(self):
+        self.assertEqual(jobs.params_from_payload({"text": "x", "cfg": 99})["cfg"], 6.0)
+        self.assertEqual(jobs.params_from_payload({"text": "x", "cfg": -5})["cfg"], 1.0)
+
+    def test_cfg_nan_becomes_default(self):
+        self.assertEqual(jobs.params_from_payload({"text": "x", "cfg": float("nan")})["cfg"], 2.0)
+
+    def test_cfg_garbage_becomes_default(self):
+        self.assertEqual(jobs.params_from_payload({"text": "x", "cfg": "abc"})["cfg"], 2.0)
+
+    def test_timesteps_bounded(self):
+        self.assertEqual(jobs.params_from_payload({"text": "x", "timesteps": 1000})["timesteps"], 60)
+        self.assertEqual(jobs.params_from_payload({"text": "x", "timesteps": -1})["timesteps"], 2)
+
+    def test_timesteps_garbage_becomes_default(self):
+        self.assertEqual(jobs.params_from_payload({"text": "x", "timesteps": None})["timesteps"], 10)
+
+
+class GgufFreeEventTest(unittest.TestCase):
+    """A2 : les jobs GGUF attendent l'Event gguf_free, plus de re-enfilement."""
+
+    def test_event_exists_and_initially_set(self):
+        from app.state import STATE
+        self.assertIsInstance(STATE.gguf_free, __import__("threading").Event)
+        self.assertTrue(STATE.gguf_free.is_set())
