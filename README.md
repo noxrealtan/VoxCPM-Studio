@@ -92,7 +92,7 @@ fonctionne donc sur CPU. Sur Apple Silicon, le même chemin GPU doit fonctionner
 - **Clonage vocal** : glissez-déposez un extrait (WAV/MP3/FLAC/M4A, 5–30 s).
   - *Clonage simple* : le timbre est repris, sans transcript.
   - *Mode Hi-Fi* : ajoutez le transcript exact pour une fidélité maximale.
-- Réglages : modèle (VoxCPM2 / 1.5 / 0.5B), appareil (auto/CPU/MPS/CUDA), CFG, qualité, seed.
+- Réglages : modèle (VoxCPM2 / 1.5 / 0.5B), appareil (Auto / CPU seulement / Forcer le GPU), CFG, qualité, seed.
 - Fichier de sortie WAV ou MP3 nommé librement, dossier `outputs/`.
 - Découpage automatique des textes longs (recommandation officielle du projet), file de
   génération non bloquante, lecteur intégré et historique.
@@ -111,7 +111,7 @@ fonctionne donc sur CPU. Sur Apple Silicon, le même chemin GPU doit fonctionner
 
 - **« Backend injoignable »** : la fenêtre du lanceur doit rester ouverte pendant l'utilisation.
 - **Génération très lente** : vous êtes probablement sur CPU. Sur un PC avec GPU NVIDIA,
-  tout est automatique ; sur Mac, `auto` utilise le GPU (MPS) quand il est disponible.
+  tout est automatique ; sur Mac, `Auto` utilise le GPU disponible quand il est compatible.
 - **Erreur au chargement du modèle** : vérifiez l'espace disque (~8 Go) et la connexion ;
   le bouton « Décharger le modèle » permet de repartir proprement.
 - **Clonage avec une référence M4A/MP3 et le moteur GGUF** : automatique — la référence

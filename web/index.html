@@ -4,204 +4,197 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VoxCPM Studio</title>
-<meta name="theme-color" content="#181512">
+<meta name="theme-color" content="#f5f6f8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAcElEQVR4nO3XSw3AMAwF0LcJzR+1aEATA2lD8EcS3vAibTm/PPfux+XxXnL3zwP4AOYD2AA2gPlr3r3U3avsXmT3IrsX2V3O7kX2KLI7kl2S7JJkl6S4JMWlKS5JcUyKS1JcmeKSFI+keCTFIyleSfFIikdSPJLikRSPvHgAZ3IDwPnLxNoAAAAASUVORK5CYII=">
 <style>
   :root{
-    --ink:#181512; --ink-2:#211d18; --ink-3:#2c2721; --steel:#39332b;
-    --ivory:#f3efe6; --paper:#faf7f0; --paper-2:#eae4d4; --paper-line:#ddd5c2;
-    --graphite:#221d16; --mist:#8a8171;
-    --amber:#e3a13e; --amber-deep:#a06514; --amber-ink:#231a0c;
-    --red:#d05c4b; --green:#7ca982; --smoke:#8d8477;
+    --bg:#f5f6f8; --surface:#ffffff; --track:#e9ecf1; --line:#d9dde3;
+    --txt:#1f2328; --secondary:#5f6773; --faint:#8b929c;
+    --accent:#2563eb; --accent-hover:#1d4ed8; --accent-soft:#eaf1fe;
+    --ok:#16a34a; --warn:#d97706; --err:#dc2626;
     --sans:"Archivo",-apple-system,"Segoe UI",sans-serif;
     --mono:"Spline Sans Mono",ui-monospace,"SF Mono",Menlo,monospace;
     --serif:"New York",ui-serif,Georgia,"Times New Roman",serif;
   }
   *{box-sizing:border-box}
-  :focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
   body{
-    margin:0;background:var(--ink);color:#ece7da;
-    font-family:var(--sans);font-size:14.5px;line-height:1.55;
+    margin:0;background:var(--bg);color:var(--txt);
+    font-family:var(--sans);font-size:15.5px;line-height:1.55;
     -webkit-font-smoothing:antialiased;
   }
-  a{color:var(--amber-deep);text-decoration:none;font-weight:600}
+  a{color:var(--accent);text-decoration:none;font-weight:600}
   a:hover{text-decoration:underline}
   button{font-family:var(--sans)}
 
-  /* ---------- en-tête console ---------- */
+  /* ---------- en-tête ---------- */
   header{
     display:flex;align-items:center;gap:12px;padding:14px 26px;
-    border-bottom:1px solid var(--ink-3);
+    background:var(--surface);border-bottom:1px solid var(--line);
   }
   .logo{
-    width:34px;height:34px;border-radius:8px;border:1px solid var(--steel);
+    width:34px;height:34px;border-radius:8px;background:var(--accent);
     display:grid;place-items:center;flex:none;
   }
-  .logo svg{width:20px;height:20px;stroke:var(--amber);fill:none;stroke-width:1.9;stroke-linecap:round}
-  header h1{font-size:15.5px;margin:0;font-weight:600;letter-spacing:.02em}
+  .logo svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round}
+  header h1{font-size:17px;margin:0;font-weight:700}
   .lamp{
-    width:8px;height:8px;border-radius:50%;background:var(--amber);
-    display:inline-block;flex:none;transition:background .4s;
+    width:9px;height:9px;border-radius:50%;background:var(--warn);
+    display:inline-block;flex:none;
   }
-  .lamp.ok{background:var(--green)} .lamp.err{background:var(--red)}
+  .lamp.ok{background:var(--ok)} .lamp.err{background:var(--err)}
   .lamp.pulse{animation:breathe 1.4s ease-in-out infinite}
-  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(227,161,62,.5)}50%{box-shadow:0 0 0 6px rgba(227,161,62,0)}}
-  #statusTxt{font:500 12px var(--mono);color:var(--smoke)}
-  #devBadge{font:400 11.5px var(--mono);color:var(--smoke);margin-left:auto}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(217,119,6,.4)}50%{box-shadow:0 0 0 6px rgba(217,119,6,0)}}
+  #statusTxt{font:500 13px var(--mono);color:var(--secondary)}
+  #devBadge{font:400 12px var(--mono);color:var(--secondary);margin-left:auto}
 
   main{max-width:1100px;margin:0 auto;padding:22px 26px 70px}
 
   /* ---------- bande : le signal ---------- */
   .tape{
     display:flex;align-items:stretch;height:58px;
-    background:var(--ink-2);border:1px solid var(--ink-3);border-radius:10px;
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
     overflow:hidden;
   }
   .tape canvas{flex:1;min-width:0;display:block}
   .tape-meta{
-    border-left:1px solid var(--ink-3);padding:0 16px;
+    border-left:1px solid var(--line);padding:0 16px;
     display:flex;align-items:center;white-space:nowrap;
-    font:400 11.5px var(--mono);color:var(--smoke);
+    font:400 12px var(--mono);color:var(--secondary);
   }
 
   .grid{display:grid;grid-template-columns:1.62fr 1fr;gap:18px;margin-top:18px;align-items:start}
   @media(max-width:900px){.grid{grid-template-columns:1fr}}
 
-  /* ---------- cartes : rack ---------- */
+  /* ---------- cartes ---------- */
   .card{
-    background:var(--ink-2);border:1px solid var(--ink-3);border-radius:10px;
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
     padding:20px 22px;
   }
-  .card h2{margin:0 0 14px;font-size:15px;font-weight:600;color:#e9e4d8}
+  .card h2{margin:0 0 14px;font-size:16px;font-weight:700;color:var(--txt)}
   .side + .side{margin-top:18px}
 
-  /* ---------- page de script (papier) ---------- */
+  /* ---------- page de script ---------- */
   textarea{
     width:100%;min-height:170px;resize:vertical;
-    background:var(--paper);color:var(--graphite);
-    border:1px solid var(--paper-line);border-radius:8px;
-    padding:16px 18px;font:400 16px/1.68 var(--serif);
-    transition:border-color .25s, box-shadow .25s;
+    background:var(--surface);color:var(--txt);
+    border:1px solid var(--line);border-radius:8px;
+    padding:14px 16px;font:400 17px/1.7 var(--serif);
   }
   textarea:focus{
-    outline:none;border-color:var(--amber);
-    box-shadow:0 0 0 3px rgba(227,161,62,.18);
+    outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(37,99,235,.22);
   }
-  textarea::placeholder{color:#b0a894;font-style:italic}
-  .seg{font:400 11.5px var(--mono);color:var(--mist);margin-top:8px}
+  textarea::placeholder{color:var(--faint)}
+  .seg{font:400 12.5px var(--mono);color:var(--secondary);margin-top:8px}
 
   select,input[type=text],input[type=number]{
-    background:var(--paper);color:var(--graphite);
-    border:1px solid var(--paper-line);border-radius:7px;
-    padding:8px 11px;font-size:13.5px;font-family:var(--sans);
-    transition:border-color .25s, box-shadow .25s;
+    background:var(--surface);color:var(--txt);
+    border:1px solid var(--line);border-radius:7px;
+    padding:9px 12px;font-size:14.5px;font-family:var(--sans);
   }
   select:focus,input[type=text]:focus,input[type=number]:focus{
-    outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(227,161,62,.18);
+    outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.22);
   }
-  input[type=range]{accent-color:var(--amber)}
-  label.small, .small{font-size:12.5px;color:var(--mist)}
+  label.small, .small{font-size:13px;color:var(--secondary)}
+  input[type=range]{accent-color:var(--accent)}
 
-  /* ---------- boutons ---------- */
+  /* ---------- boutons (pas de transition : le paint WebKit gele sinon) ---------- */
   button{
     appearance:none;-webkit-appearance:none;
     cursor:pointer;border:1px solid transparent;border-radius:8px;
-    padding:10px 16px;font-size:13.5px;font-weight:600;
-    transition:color .2s, border-color .2s, filter .2s;
+    padding:10px 16px;font-size:14px;font-weight:600;
   }
   button:active{transform:translateY(1px)}
   .btn-primary{
-    background-color:var(--amber);color:var(--amber-ink);
-    padding:13px 24px;font-weight:700;font-size:14px;
+    background-color:var(--accent);color:#fff;
+    padding:13px 26px;font-weight:700;font-size:15px;
   }
-  .btn-primary:hover{background-color:#edb45c}
+  .btn-primary:hover{background-color:var(--accent-hover)}
   .btn-primary:disabled{opacity:.45;cursor:not-allowed}
   .btn-ghost{
-    background-color:transparent;border-color:var(--ink-3);color:var(--smoke);
-    font-size:12.5px;padding:7px 13px;
+    background-color:var(--surface);border-color:var(--line);color:var(--secondary);
+    font-size:13px;padding:7px 13px;
   }
-  .btn-ghost:hover{border-color:var(--amber);color:var(--amber)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
 
   /* ---------- voix désignée : méthodes ---------- */
-  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
   .chip{
-    background:transparent;border:1px solid var(--ink-3);color:var(--smoke);
-    border-radius:6px;padding:7px 11px;
-    font:500 11px var(--mono);letter-spacing:.03em;
+    background-color:var(--surface);border:1px solid var(--line);color:var(--txt);
+    border-radius:6px;padding:8px 13px;font-size:13px;font-weight:500;
   }
-  .chip:hover{border-color:var(--amber);color:var(--amber)}
-  .chip.active{background-color:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
+  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  .chip.active{background-color:var(--accent);border-color:var(--accent);color:#fff}
 
-  .mode{display:flex;gap:2px;background:var(--ink);border-radius:8px;padding:3px;margin-top:18px}
+  .mode{display:flex;gap:2px;background:var(--track);border-radius:8px;padding:3px;margin-top:18px}
   .mode label{flex:1;position:relative}
   .mode input{position:absolute;opacity:0;pointer-events:none}
   .mode span{
-    display:block;text-align:center;padding:8px 10px;border-radius:6px;cursor:pointer;
-    font:600 12px var(--mono);letter-spacing:.02em;color:var(--smoke);
+    display:block;text-align:center;padding:9px 10px;border-radius:6px;cursor:pointer;
+    font-size:13.5px;font-weight:600;color:var(--secondary);
   }
-  .mode span:hover{color:#c9c2b1}
-  .mode input:checked + span{background-color:var(--steel);color:var(--ivory)}
-  .mode input:focus-visible + span{outline:2px solid var(--amber);outline-offset:1px}
+  .mode span:hover{color:var(--txt)}
+  .mode input:checked + span{background-color:var(--surface);color:var(--txt);box-shadow:0 1px 3px rgba(31,35,40,.15)}
+  .mode input:focus-visible + span{outline:2px solid var(--accent);outline-offset:1px}
 
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
   /* ---------- dépôt d'extrait ---------- */
   .drop{
-    margin-top:14px;border:1.5px dashed #4a4436;border-radius:8px;
-    padding:18px;text-align:center;cursor:pointer;background:var(--ink);
-    color:var(--smoke);font-size:13px;
-    transition:border-color .2s, color .2s;
+    margin-top:14px;border:1.5px dashed #b6bec9;border-radius:8px;
+    padding:18px;text-align:center;cursor:pointer;background:var(--surface);
+    color:var(--secondary);font-size:14px;
   }
-  .drop b{color:#c9c2b1;font-weight:600}
-  .drop:hover{border-color:var(--amber)}
-  .drop.over{border-color:var(--amber);color:var(--amber);background-color:rgba(227,161,62,.06)}
-  .drop small{display:block;margin-top:5px;font:400 10.5px var(--mono);color:#6d6555}
+  .drop b{color:var(--txt);font-weight:600}
+  .drop:hover{border-color:var(--accent)}
+  .drop.over{border-color:var(--accent);color:var(--accent);background-color:var(--accent-soft)}
+  .drop small{display:block;margin-top:5px;font-size:12px;color:var(--faint)}
   input[type=file]{display:none}
 
-  .hint{font-size:12px;color:var(--mist);margin-top:6px}
+  .hint{font-size:13px;color:var(--secondary);margin-top:6px}
   .slider-row{display:flex;align-items:center;gap:12px;margin:9px 0}
   .slider-row label{width:150px;flex:none}
   .slider-row input[type=range]{flex:1}
   .slider-row .val{
-    width:44px;text-align:right;font:600 12px var(--mono);
-    color:var(--amber);font-variant-numeric:tabular-nums;
+    width:44px;text-align:right;font:600 13px var(--mono);
+    color:var(--accent);font-variant-numeric:tabular-nums;
   }
 
   /* ---------- statut ---------- */
-  #log{margin-top:12px;font:400 12.5px var(--mono);color:var(--smoke);min-height:19px}
-  #log.err{color:var(--red)} #log.ok{color:var(--green)}
-  .progress{height:4px;background:var(--ink);border-radius:2px;overflow:hidden;margin-top:12px;display:none}
-  .progress>div{height:100%;width:0;background:var(--amber);transition:width .5s ease}
+  #log{margin-top:12px;font:400 13px var(--mono);color:var(--secondary);min-height:19px}
+  #log.err{color:var(--err)} #log.ok{color:var(--ok)}
+  .progress{height:5px;background:var(--track);border-radius:3px;overflow:hidden;margin-top:12px;display:none}
+  .progress>div{height:100%;width:0;background-color:var(--accent);transition:width .5s ease}
   audio{width:100%;margin-top:14px}
 
   /* ---------- sorties récentes ---------- */
-  .hist{display:flex;flex-direction:column;gap:7px}
+  .hist{display:flex;flex-direction:column;gap:8px}
   @keyframes slidein{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
   .hist-item{
-    background:var(--paper);border:1px solid var(--paper-line);border-radius:8px;
-    padding:9px 13px;font-size:13px;color:var(--graphite);
+    background:var(--surface);border:1px solid var(--line);border-radius:8px;
+    padding:10px 13px;font-size:13.5px;color:var(--txt);
     display:flex;justify-content:space-between;gap:8px;align-items:center;
-    animation:slidein .45s ease both;
-    transition:border-color .2s;
+    animation:slidein .4s ease both;
   }
-  .hist-item:hover{border-color:var(--amber)}
-  .hist-item .meta{font:400 10.5px var(--mono);color:var(--mist);margin-top:2px}
-  .hist-item a{font:500 11.5px var(--mono)}
+  .hist-item:hover{border-color:var(--accent)}
+  .hist-item .meta{font:400 11.5px var(--mono);color:var(--secondary);margin-top:2px}
+  .hist-item a{font:500 12.5px var(--mono)}
 
-  .statusline{display:flex;gap:12px;flex-wrap:wrap;font:400 11px var(--mono);color:var(--smoke);margin-top:12px}
-  #engineStatus code{font:inherit;background:var(--paper-2);color:#6f6759;padding:1px 5px;border-radius:4px}
+  .statusline{display:flex;gap:12px;flex-wrap:wrap;font:400 11.5px var(--mono);color:var(--secondary);margin-top:12px}
+  #engineStatus code{font:inherit;background:var(--track);color:var(--txt);padding:1px 5px;border-radius:4px}
   details.settings{margin-top:16px}
   details.settings summary{
-    cursor:pointer;color:var(--amber-deep);font:600 12px var(--mono);
-    letter-spacing:.03em;list-style:none;
+    cursor:pointer;color:var(--accent);font-size:13.5px;font-weight:600;
+    list-style:none;
   }
   details.settings summary::-webkit-details-marker{display:none}
   details.settings summary::before{
     content:"⌄";display:inline-block;margin-right:7px;
-    transition:transform .3s ease;color:var(--smoke);
+    transition:transform .3s ease;color:var(--secondary);
   }
   details.settings[open] summary::before{transform:rotate(180deg)}
   .settings-body{margin-top:12px}
@@ -211,7 +204,7 @@
     main{padding:14px 12px 60px}
     .card{padding:16px}
     .tape{height:46px}
-    .tape-meta{padding:0 10px;font-size:10.5px}
+    .tape-meta{padding:0 10px;font-size:11px}
   }
   @media (prefers-reduced-motion: reduce){
     *{animation:none !important;transition:none !important}
@@ -266,7 +259,7 @@
             <input type="checkbox" id="hifi"> Mode Hi-Fi (transcript exact → fidélité maximale)
           </label>
         </div>
-        <textarea id="promptText" placeholder="Transcript exact de l'audio de référence…" style="min-height:60px;display:none;margin-top:10px;font-size:14px"></textarea>
+        <textarea id="promptText" placeholder="Transcript exact de l'audio de référence…" style="min-height:60px;display:none;margin-top:10px;font-size:15px"></textarea>
         <div class="hint" id="hifiHint" style="display:none">Écrivez ce qui est dit dans l'audio, mot pour mot. Le clonage reprendra là où l'audio s'arrête.</div>
       </div>
 
@@ -310,10 +303,10 @@
         <div class="row" style="margin-top:12px"><label class="small" style="width:64px;flex:none">Appareil</label>
           <select id="device" style="flex:1">
             <option value="auto">Auto (recommandé)</option>
-            <option value="cpu">CPU</option>
-            <option value="mps">MPS (Mac GPU)</option>
-            <option value="cuda">CUDA (GPU NVIDIA)</option>
+            <option value="cpu">CPU seulement</option>
+            <option value="gpu">Forcer le GPU</option>
           </select></div>
+        <div class="hint" id="gpuHint">Le GPU est détecté au démarrage ; en cas d'échec, repli CPU automatique.</div>
         <div class="statusline" id="engineStatus"></div>
         <div class="row" style="margin-top:14px">
           <button class="btn-ghost" id="reload">Décharger le modèle</button>
@@ -346,7 +339,7 @@ const PRESETS = [
   {label:"Robotique", v:"Une voix robotique et métallique, monocorde"},
 ];
 
-/* ---------- bande : le signal (idle discret / génération ambrée / spectre réel) ---------- */
+/* ---------- bande : le signal (idle discret / génération active / spectre réel) ---------- */
 const tape = (() => {
   const cv = $("tape"), ctx = cv.getContext("2d");
   const N = 110;
@@ -403,7 +396,7 @@ const tape = (() => {
       }
       if(tick % 60 === 0) meta();
     }
-    ctx.fillStyle = "#332d25";
+    ctx.fillStyle = "#d9dde3";
     ctx.fillRect(0, h / 2 - 0.5, w, 1);
     const bw = w / N;
     for(let i = 0; i < N; i++){
@@ -414,7 +407,7 @@ const tape = (() => {
       }else v = tgt[i];
       lvl[i] += (v - lvl[i]) * (mode === "idle" ? 0.08 : 0.3);
       const bh = Math.max(1.5, lvl[i] * (h - 14));
-      ctx.fillStyle = mode === "idle" ? "rgba(210,198,170,.16)" : "#e3a13e";
+      ctx.fillStyle = mode === "idle" ? "rgba(31,35,40,.20)" : "#2563eb";
       ctx.globalAlpha = mode === "idle" ? 1 : 0.55 + 0.45 * lvl[i];
       ctx.fillRect(i * bw + bw * 0.28, (h - bh) / 2, bw * 0.44, bh);
     }
@@ -542,7 +535,7 @@ async function refreshHealth(){
     $("devBadge").textContent = devTxt;
     if(h.model.error){
       $("modelInfo").textContent = h.model.error;
-      $("modelInfo").style.color = "var(--red)";
+      $("modelInfo").style.color = "var(--err)";
     } else {
       const info = (h.models || []).find(m => m.id === $("model").value);
       $("modelInfo").textContent = info ? info.info : "";
@@ -554,7 +547,7 @@ async function refreshHealth(){
       const gname = g.backend || "GPU";
       line = "Moteur C++ (llama.cpp-omni) : prêt · " + h.gguf.models.length + " modèle(s) GGUF" +
         (g.supported === true ? " · GPU : " + gname
-        : g.supported === false ? " · " + gname + " indisponible, repli CPU"
+        : g.supported === false ? " · " + gname + " indisponible sur ce GPU, repli CPU"
         : g.probe === "running" ? " · test GPU " + gname + " en cours…"
         : " · GPU " + gname + " : essayé à la 1re génération");
     } else {
@@ -563,6 +556,11 @@ async function refreshHealth(){
     }
     $("engineStatus").innerHTML = line +
       " · Sorties : <code>" + h.outputs_dir + "</code>";
+    if(h.gguf && h.gguf.gpu){
+      const g2 = h.gguf.gpu;
+      if(g2.supported === true) $("gpuHint").textContent = "GPU " + (g2.backend || "") + " actif (détecté au démarrage).";
+      else if(g2.supported === false) $("gpuHint").textContent = "GPU " + (g2.backend || "") + " incompatible sur cette machine — CPU utilisé automatiquement.";
+    }
     // modèles disponibles (deux familles : moteur Python / moteur C++)
     const sel = $("model");
     if(sel.options.length === 0){

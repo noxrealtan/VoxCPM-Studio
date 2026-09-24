@@ -20,11 +20,29 @@ GGUF_DIR = os.path.join(ROOT, "gguf")
 BIN_NAME = "voxcpm2-cli.exe" if sys.platform == "win32" else "voxcpm2-cli"
 REPO = "https://github.com/tc-mb/llama.cpp-omni"
 
-# Backend GPU du binaire : déduit de la plateforme (le CLI ne l'expose pas).
-# macOS -> Metal (seul backend compilé pour ce binaire) ; ailleurs (Windows)
-# Vulkan est le backend par défaut du projet amont (GGML_VULKAN=ON), avec
-# repli CPU automatique si le GPU échoue ou n'a pas assez de VRAM.
-GPU_BACKEND_NAME = "Metal" if sys.platform == "darwin" else "Vulkan"
+# Backend GPU du binaire : détecté dans gguf/bin (un binaire GGML n'embarque
+# qu'un backend GPU, choisi à la compilation — GGML_METAL / GGML_VULKAN /
+# GGML_CUDA). Repli sur la convention de plateforme si le dossier est absent
+# (macOS -> Metal ; ailleurs -> Vulkan, le backend par défaut du projet amont).
+_BACKEND_NAMES = (("ggml-metal", "Metal"), ("ggml-vulkan", "Vulkan"), ("ggml-cuda", "CUDA"))
+
+
+def detect_backend(bindir):
+    """Nom du backend GPU compilé dans le binaire, d'après ses dylibs/DLL."""
+    try:
+        libs = os.listdir(bindir)
+    except OSError:
+        return None
+    for lib in libs:
+        low = lib.lower()
+        for key, name in _BACKEND_NAMES:
+            if key in low:
+                return name
+    return None
+
+
+GPU_BACKEND_NAME = (detect_backend(os.path.join(GGUF_DIR, "bin"))
+                    or ("Metal" if sys.platform == "darwin" else "Vulkan"))
 
 GGUF_MODELS = [
     {"id": "gguf:VoxCPM2-BaseLM-Q8_0", "label": "VoxCPM2 GGUF Q8_0 (2B, 30 langues, 48 kHz)",
@@ -118,17 +136,15 @@ def gpu_status():
 
 
 def start_gpu_probe():
-    """Sonde le GPU une fois par session au démarrage (Vulkan sous Windows/Linux).
+    """Sonde le GPU une fois par session au démarrage.
 
     Lance en arrière-plan une mini-génération silencieuse (modèle le plus léger
     installé, timesteps réduits, 60 s max) et mémorise le verdict dans
     _GPU_STATE : la première vraie génération sait alors immédiatement si le
-    GPU est utilisable, et /api/health l'affiche.
-    macOS : pas de sonde — Metal est testé paresseusement à la 1re génération
-    (comportement validé sur ce projet, aucune régression souhaitée).
+    GPU est utilisable, et /api/health l'affiche. Évite notamment de rejouer
+    un crash Metal à chaque génération quand le GPU ne supporte pas les ops
+    du moteur (constaté sur Radeon de 2017).
     """
-    if sys.platform == "darwin":
-        return
     if _GPU_STATE["supported"] is not None or _PROBE_STATE["phase"] != "idle":
         return
     models = installed_models()

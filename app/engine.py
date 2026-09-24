@@ -53,8 +53,9 @@ def resolve_device(requested):
     (meme ordre que la doc VoxCPM). Le moteur GGUF, lui, gere son propre
     backend GPU (Metal/Vulkan) : il n'utilise jamais cette fonction.
     """
-    if requested and requested not in ("auto", ""):
+    if requested and requested not in ("auto", "", "gpu"):
         return requested
+    # "gpu" = forcer le GPU du moteur C++ (GGUF) ; cote natif, on resout normalement
     ti = torch_info()
     if ti.get("cuda"):
         return "cuda"

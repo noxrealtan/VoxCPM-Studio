@@ -38,12 +38,19 @@ if ($NotesFile -and (Test-Path -LiteralPath $NotesFile)) {
 $notes = @(
   "![Interface de VoxCPM Studio](https://github.com/$Repo/raw/main/docs/screenshot.png)",
   "",
-  "Application Windows autonome (VoxCPMStudio.exe), construite et smoke-testee par GitHub Actions au tag $Tag.",
+  "VoxCPM Studio $Tag pour Windows : application autonome, construite et vérifiée par GitHub Actions.",
   "",
-  "## Telechargement",
-  "- **VoxCPMStudio.exe** - $sizeMb MB ($($bytes.Length) octets)",
-  "- **SHA-256** : $sha",
-  "- Somme de controle : fichier checksums.txt joint (verifiable avec verifier.bat)"
+  "## À retenir",
+  "- Interface claire, plus lisible et adaptée aux écrans de bureau.",
+  "- Détection du backend GPU et sonda au démarrage, avec repli CPU automatique.",
+  "- Serveur local protégé par validation Host/Origin et jeton de session.",
+  "- Bornes de sécurité sur les paramètres de génération et historique rendu sans HTML dynamique.",
+  "",
+  "## Téléchargement",
+  "- **VoxCPMStudio.exe** — $sizeMb Mo ($($bytes.Length) octets)",
+  "- **SHA-256 :** $sha",
+  "- **Contrôle d’intégrité :** téléchargement joint `checksums.txt`, vérifiable avec `verifier.bat`",
+  "- **Vérificateurs :** `verify_checksum.ps1` et `verifier.bat` sont également joints"
 )
 if ($changelog.Trim()) {
   $notes += ""

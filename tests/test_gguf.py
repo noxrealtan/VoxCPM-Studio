@@ -130,13 +130,26 @@ class ModelsStatusTest(unittest.TestCase):
         self.assertTrue(p is None or os.path.isfile(p))
 
     def test_gpu_backend_name_per_platform(self):
-        """macOS -> Metal ; ailleurs (Windows) -> Vulkan (backend amont)."""
+        """Metal sous macOS ; Vulkan ailleurs (convention amont, sans dossier bin)."""
         import sys as _sys
         expected = "Metal" if _sys.platform == "darwin" else "Vulkan"
         self.assertEqual(gguf.GPU_BACKEND_NAME, expected)
         self.assertEqual(gguf.gpu_status()["backend"], expected)
         self.assertIn("attempted", gguf.gpu_status())
         self.assertIn("supported", gguf.gpu_status())
+
+    def test_detect_backend_from_libs(self):
+        """Le backend compilé se lit dans les dylibs/DLL de gguf/bin."""
+        import tempfile as _tempfile
+        for lib, expected in (("libggml-metal.0.dylib", "Metal"),
+                              ("ggml-vulkan.dll", "Vulkan"),
+                              ("libggml-cuda.so", "CUDA")):
+            with _tempfile.TemporaryDirectory() as tmp:
+                open(os.path.join(tmp, lib), "wb").close()
+                self.assertEqual(gguf.detect_backend(tmp), expected)
+        with _tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(gguf.detect_backend(tmp))
+        self.assertIsNone(gguf.detect_backend("/chemin/inexistant"))
 
 
 @unittest.skipUnless(GGUF_AVAILABLE, "moteur GGUF non installe sur cette machine")
@@ -185,10 +198,6 @@ class GpuProbeTest(unittest.TestCase):
     def test_status_exposes_probe_phase(self):
         gguf._PROBE_STATE["phase"] = "running"
         self.assertEqual(gguf.gpu_status()["probe"], "running")
-
-    def test_noop_on_macos(self):
-        gguf.start_gpu_probe()
-        self.assertEqual(gguf._PROBE_STATE["phase"], "idle")
 
     def test_noop_when_verdict_already_known(self):
         gguf._GPU_STATE["supported"] = False
