@@ -49,7 +49,7 @@ $notes = @(
   "## Téléchargement",
   "- **VoxCPMStudio.exe** — $sizeMb Mo ($($bytes.Length) octets)",
   "- **SHA-256 :** $sha",
-  "- **Contrôle d’intégrité :** téléchargement joint `checksums.txt`, vérifiable avec `verifier.bat`",
+  '- **Contrôle d’intégrité :** téléchargement joint `checksums.txt`, vérifiable avec `verifier.bat`',
   '- **Vérificateurs :** `verify_checksum.ps1` et `verifier.bat` sont également joints'
 )
 if ($changelog.Trim()) {
