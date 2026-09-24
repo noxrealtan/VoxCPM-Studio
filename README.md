@@ -132,6 +132,8 @@ fonctionne donc sur CPU. Sur Apple Silicon, le même chemin GPU doit fonctionner
 | `packaging/` | Bundle macOS `VoxCPM Studio.app` (`make_app.sh`) et **`.exe` Windows** (`build_exe.bat`, `png_to_ico.ps1`) + icône |
 | `EXIGENCES.md` | Analyse du dépôt VoxCPM et exigences de l'application |
 
+> **Serveur local protégé** : l'app n'écoute que sur `127.0.0.1` et chaque démarrage crée un jeton de session ; l'API l'exige (cookie `HttpOnly`), donc un `curl` ou un autre programme local sans jeton reçoit `401 Accès refusé`. Ne fermez pas l'application en gardant l'onglet ouvert : relancez l'app après un redémarrage.
+
 ## ☕ Soutenir le projet
 
 Si VoxCPM Studio vous est utile, [offrez-moi un café](https://www.buymeacoffee.com/fluxy73) ☕ —

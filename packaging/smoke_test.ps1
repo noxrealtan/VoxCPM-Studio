@@ -4,12 +4,14 @@
 #  PyTorch. Le test n'affirme que ce qui y est vrai :
 #    1. le serveur embarqué démarre et répond /api/health ok:true
 #    2. l'interface est servie sur /
-#    3. une demande de modèle natif est rejetée 400 avec le message clair
-#    4. gguf.available est false dans cet environnement (ni binaire ni poids)
-#    5. génération de checksums.txt : SHA-256 de tous les assets de la release
+#    3. une demande SANS jeton de session est rejetée 401 (API fermée aux
+#       autres processus locaux) ; avec le jeton du démarrage, ça passe
+#    4. une demande de modèle natif est rejetée 400 avec le message clair
+#    5. gguf.available est false dans cet environnement (ni binaire ni poids)
+#    6. génération de checksums.txt : SHA-256 de tous les assets de la release
 #       (le .exe, le vérificateur embarqué et son lanceur double-clic)
-#    6. le manifeste est vérifié par le vérificateur embarqué lui-même
-#       (le même code que l'utilisateur exécutera via verifier.bat)
+#    7. le manifeste est vérifié par le vérificateur embarqué lui-même
+#      (le même code que l'utilisateur exécutera via verifier.bat)
 #  Aucune génération audio : impossible sans poids.
 #  La fenêtre native (WebView2) n'est PAS testée ici : le .exe démarre en mode
 #  VOXCPM_BROWSER=1 (repli navigateur déterministe en CI, sans GUI).
@@ -77,12 +79,25 @@ try {
   }
   Write-Host "Port découvert : $uriBase"
 
+  # --- Jeton de session : émis dans l'URL d'ouverture journalisée ---------
+  $token = $null
+  $deadline = (Get-Date).AddSeconds(20)
+  while (-not $token) {
+    $log = Get-Content smoke_out.log -Raw -ErrorAction SilentlyContinue
+    if ($log -match '127\.0\.0\.1:\d+/\?token=([A-Za-z0-9_-]+)') { $token = $Matches[1] }
+    elseif ((Get-Date) -gt $deadline) {
+      throw ("Jeton de session introuvable dans smoke_out.log. Sortie : {0}" -f $log)
+    } else { Start-Sleep -Milliseconds 300 }
+  }
+  $session = @{ Cookie = "voxcpm_token=$token" }
+  Write-Host "Jeton de session récupéré dans le log de démarrage."
+
   # --- 1. /api/health doit répondre ok:true --------------------------------
   $deadline = (Get-Date).AddSeconds(20)
   $health = $null
   do {
     try {
-      $health = Invoke-RestMethod -Uri "$uriBase/api/health" -TimeoutSec 3
+      $health = Invoke-RestMethod -Uri "$uriBase/api/health" -TimeoutSec 3 -Headers $session
       break
     } catch {
       if ((Get-Date) -gt $deadline) { throw "/api/health injoignable sur $uriBase : $_" }
@@ -92,18 +107,28 @@ try {
   if (-not $health.ok) { throw "health.ok est false : $($health | ConvertTo-Json -Compress)" }
 
   # --- 2. L'interface est servie sur / -------------------------------------
-  $ui = Invoke-WebRequest -Uri "$uriBase/" -TimeoutSec 10
+  $ui = Invoke-WebRequest -Uri "$uriBase/" -TimeoutSec 10 -Headers $session
   $ct = $ui.Headers["Content-Type"]
   if ($ui.Content -notmatch "VoxCPM" -or $ct -notmatch "text/html") {
     throw "L'interface n'est pas servie correctement (Content-Type: $ct)"
   }
 
-  # --- 3. Modèle natif sans PyTorch -> 400 avec message clair --------------
+  # --- 3. Sans jeton de session -> 401 (API fermée aux autres processus) ---
+  $anon = $null
+  try {
+    Invoke-WebRequest -Uri "$uriBase/api/health" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+    $anon = 200
+  } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
+    $anon = [int]$_.Exception.Response.StatusCode
+  }
+  if ($anon -ne 401) { throw "Attendu 401 sans jeton de session, obtenu $anon" }
+
+  # --- 4. Modèle natif sans PyTorch -> 400 avec message clair --------------
   $code = $null; $body = $null
   try {
     Invoke-WebRequest -Uri "$uriBase/api/generate" -Method Post -TimeoutSec 10 `
       -ContentType "application/json" -Body '{"text":"test CI","model_id":"openbmb/VoxCPM2"}' `
-      -ErrorAction Stop | Out-Null
+      -Headers $session -ErrorAction Stop | Out-Null
     throw "POST /api/generate natif accepte (200) : le preflight voxcpm n'a pas rejete"
   } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
     $code = [int]$_.Exception.Response.StatusCode
@@ -114,12 +139,12 @@ try {
     throw "Le message 400 ne contient pas la phrase attendue : $body"
   }
 
-  # --- 4. Sans CLI ni poids, gguf.available doit être false ----------------
+  # --- 5. Sans CLI ni poids, gguf.available doit être false ----------------
   if ($health.gguf.available -ne $false) {
     throw "gguf.available devrait être false en CI : $($health.gguf | ConvertTo-Json -Compress)"
   }
 
-  # --- 5. Manifeste des checksums : SHA-256 de tous les assets -------------
+  # --- 6. Manifeste des checksums : SHA-256 de tous les assets -------------
   $artifactDir = Split-Path -Parent $ExePath
   $checksumPath = Join-Path $artifactDir "checksums.txt"
   $lines = @("# Verifie avec : verify_checksum.ps1 (verifier.bat) - format sha256sum")
@@ -131,7 +156,7 @@ try {
   $lines | Set-Content -Path $checksumPath -Encoding ascii
   Get-Content $checksumPath
 
-  # --- 6. Le manifeste est vérifié par le vérificateur embarqué ------------
+  # --- 7. Le manifeste est vérifié par le vérificateur embarqué ------------
   & powershell -NoProfile -ExecutionPolicy Bypass `
     -File "packaging\verify_checksum.ps1" -Path $ExePath -ChecksumFile $checksumPath
   if ($LASTEXITCODE -ne 0) {
@@ -139,7 +164,7 @@ try {
   }
   Write-Host "Checksums des 3 assets verifies par verify_checksum.ps1 : OK."
 
-  Write-Host "Smoke test OK : health=$($health.ok), UI servie, natif->400 clair, gguf indisponible, checksums verifies."
+  Write-Host "Smoke test OK : health=$($health.ok), UI servie, session 401 sans jeton / 200 avec, natif->400 clair, gguf indisponible, checksums verifies."
 } finally {
   if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
   Remove-Item Env:VOXCPM_BROWSER -ErrorAction SilentlyContinue

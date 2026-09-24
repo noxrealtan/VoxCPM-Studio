@@ -4,22 +4,62 @@
 import json
 import os
 import platform
+import secrets
 import socket
 import sys
 import threading
 import webbrowser
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qsl
 
 from . import engine, gguf, jobs
 from .state import (APP_VERSION, MAX_BODY, MAX_TEXT_CHARS, MODELS, OUTPUTS_DIR,
                     STATIC_DIR, STATE, log)
 
+# S2 : jeton de session régénéré à chaque démarrage. Il n'est connu que de
+# l'app (URL d'ouverture) ; l'API l'exige ensuite via un cookie HttpOnly
+# SameSite=Strict, invisible au JS et jamais rejoué par un site tiers.
+SESSION_TOKEN = secrets.token_urlsafe(32)
+COOKIE_NAME = "voxcpm_token"
+
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "VoxCPMStudio/" + APP_VERSION
+    _token_from_query = False
 
     def log_message(self, fmt, *args):  # logs compacts
         pass
+
+    # -- garde CSRF / DNS rebinding / jeton de session ---------------------
+    def _session_token(self, query):
+        """Jeton de session fourni par : query (1re navigation) > en-tete > cookie."""
+        q = dict(parse_qsl(query))
+        self._token_from_query = "token" in q
+        token = q.get("token") or self.headers.get("X-VoxCPM-Token")
+        if not token:
+            jar = SimpleCookie(self.headers.get("Cookie") or "")
+            token = jar[COOKIE_NAME].value if COOKIE_NAME in jar else ""
+        return token or ""
+
+    def _safe_request(self, query=""):
+        """Rejette toute requete dont Host n'est pas le serveur local, dont
+        l'Origin (presente pour les POST navigateur) ne pointe pas dessus, ou
+        qui ne presente pas le jeton de session de ce demarrage.
+        Ferme : CSRF, DNS rebinding, et l'acces des autres processus locaux."""
+        host = (self.headers.get("Host") or "").strip()
+        if host != "127.0.0.1:%d" % self.server.server_address[1]:
+            self._json({"error": "Requete refusee : hote non autorise."}, 403)
+            return False
+        origin = (self.headers.get("Origin") or "").strip()
+        if origin and origin.rstrip("/") != "http://" + host:
+            self._json({"error": "Requete refusee : origine non autorisee."}, 403)
+            return False
+        if not secrets.compare_digest(self._session_token(query), SESSION_TOKEN):
+            self._json({"error": "Acces refuse : session non autorisee. "
+                                 "Relancez l'application."}, 401)
+            return False
+        return True
 
     # -- utilitaires -------------------------------------------------------
     def _json(self, obj, code=200):
@@ -56,7 +96,20 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
         query = self.path.split("?")[1] if "?" in self.path else ""
+        if not self._safe_request(query):
+            return
         if path in ("/", "/index.html"):
+            if self._token_from_query:
+                # 1re navigation avec le jeton : on pose le cookie puis on
+                # redirige vers une URL propre (le jeton ne reste pas dans
+                # l'historique du navigateur)
+                self.send_response(302)
+                self.send_header("Set-Cookie", "%s=%s; Path=/; HttpOnly; SameSite=Strict"
+                                 % (COOKIE_NAME, SESSION_TOKEN))
+                self.send_header("Location", path)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             self._file(os.path.join(STATIC_DIR, "index.html"), "text/html; charset=utf-8")
         elif path == "/favicon.ico":
             self.send_response(204)
@@ -78,6 +131,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?")[0]
+        if not self._safe_request(self.path.split("?")[1] if "?" in self.path else ""):
+            return
         try:
             payload = self._read_body()
         except Exception as e:
@@ -190,7 +245,9 @@ def start_server(port):
 
 
 def server_url(port):
-    return "http://127.0.0.1:%d" % port
+    """URL d'ouverture : porte le jeton de session (1re navigation seulement,
+    le cookie prend le relais ensuite)."""
+    return "http://127.0.0.1:%d/?token=%s" % (port, SESSION_TOKEN)
 
 
 def wait_forever():
@@ -231,7 +288,7 @@ def main():
 
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     httpd.daemon_threads = True
-    url = "http://127.0.0.1:%d" % port
+    url = server_url(port)
     log("VoxCPM Studio v%s - %s" % (APP_VERSION, url))
     log("Repertoire de sortie : %s" % OUTPUTS_DIR)
     if open_browser:

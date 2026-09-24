@@ -39,10 +39,14 @@ class ServerTestCase(unittest.TestCase):
         cls.httpd.shutdown()
         cls.httpd.server_close()
 
-    def req(self, method, path, obj=None):
+    def req(self, method, path, obj=None, headers=None, auth=True):
+        """Par defaut la requete porte le cookie de session, comme la webview."""
         data = json.dumps(obj).encode() if obj is not None else None
-        r = urllib.request.Request(self.base + path, data=data, method=method,
-                                   headers={"Content-Type": "application/json"})
+        h = {"Content-Type": "application/json"}
+        if auth:
+            h["Cookie"] = "%s=%s" % (http_api.COOKIE_NAME, http_api.SESSION_TOKEN)
+        h.update(headers or {})
+        r = urllib.request.Request(self.base + path, data=data, method=method, headers=h)
         try:
             resp = urllib.request.urlopen(r, timeout=60)
             body = resp.read()
@@ -137,10 +141,11 @@ class GenerationFlowsTest(ServerTestCase):
     @staticmethod
     def wait_job(base, jid, timeout=300):
         t0 = time.time()
+        cookie = {"Cookie": "%s=%s" % (http_api.COOKIE_NAME, http_api.SESSION_TOKEN)}
         while time.time() - t0 < timeout:
             try:
-                j = json.loads(urllib.request.urlopen(base + "/api/job/" + jid,
-                                                      timeout=30).read())
+                r = urllib.request.Request(base + "/api/job/" + jid, headers=cookie)
+                j = json.loads(urllib.request.urlopen(r, timeout=30).read())
             except Exception:
                 time.sleep(3)
                 continue
@@ -256,3 +261,86 @@ class LegacyModelGuardTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OriginHostGuardTest(ServerTestCase):
+    """S1+S3 : Host exige = serveur local ; Origin presente doit correspondre."""
+
+    def test_bad_host_rejected(self):
+        code, _, body = self.req("GET", "/api/health", headers={"Host": "evil.example.com"})
+        self.assertEqual(code, 403)
+        self.assertIn("hote", body["error"])
+
+    def test_wrong_port_host_rejected(self):
+        code, _, body = self.req("GET", "/api/health",
+                                  headers={"Host": "127.0.0.1:9999"})
+        self.assertEqual(code, 403)
+
+    def test_cross_origin_post_rejected(self):
+        code, _, body = self.req("POST", "/api/generate_async",
+                                 {"text": "x"}, headers={"Origin": "https://evil.example.com"})
+        self.assertEqual(code, 403)
+        self.assertIn("origine", body["error"])
+
+    def test_matching_origin_accepted(self):
+        code, _, body = self.req("POST", "/api/device", {"device": "auto"},
+                                 headers={"Origin": self.base})
+        self.assertEqual(code, 200)
+        self.assertTrue(body["ok"])
+
+    def test_normal_request_without_origin_ok(self):
+        code, _, body = self.req("GET", "/api/health")
+        self.assertEqual(code, 200)
+        self.assertTrue(body["ok"])
+
+
+class SessionTokenTest(ServerTestCase):
+    """S2 : l'API exige le jeton de session pose au demarrage — ferme l'acces
+    des autres processus locaux et des sessions navigateur hors app."""
+
+    class _NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *a):
+            return None
+
+    def test_api_without_token_401(self):
+        code, _, body = self.req("GET", "/api/health", auth=False)
+        self.assertEqual(code, 401)
+        self.assertIn("session", body["error"].lower())
+
+    def test_post_without_token_401(self):
+        code, _, _ = self.req("POST", "/api/device", {"device": "auto"}, auth=False)
+        self.assertEqual(code, 401)
+
+    def test_wrong_cookie_401(self):
+        code, _, _ = self.req("GET", "/api/health", auth=False,
+                              headers={"Cookie": http_api.COOKIE_NAME + "=mauvais"})
+        self.assertEqual(code, 401)
+
+    def test_header_token_accepted(self):
+        code, _, body = self.req("GET", "/api/health", auth=False,
+                                 headers={"X-VoxCPM-Token": http_api.SESSION_TOKEN})
+        self.assertEqual(code, 200)
+        self.assertTrue(body["ok"])
+
+    def test_root_without_token_401(self):
+        code, _, _ = self.req("GET", "/", auth=False)
+        self.assertEqual(code, 401)
+
+    def test_query_token_sets_cookie_then_redirects(self):
+        opener = urllib.request.build_opener(self._NoRedirect)
+        r = urllib.request.Request(self.base + "/?token=" + http_api.SESSION_TOKEN)
+        try:
+            resp = opener.open(r, timeout=10)
+            code, headers = resp.status, resp.headers
+        except urllib.error.HTTPError as e:
+            code, headers = e.code, e.headers
+        self.assertEqual(code, 302)
+        sc = headers.get("Set-Cookie") or ""
+        self.assertIn(http_api.COOKIE_NAME, sc)
+        self.assertIn("HttpOnly", sc)
+        self.assertIn("SameSite=Strict", sc)
+        self.assertEqual(headers.get("Location"), "/")
+
+    def test_wrong_query_token_401(self):
+        code, _, _ = self.req("GET", "/?token=mauvais", auth=False)
+        self.assertEqual(code, 401)

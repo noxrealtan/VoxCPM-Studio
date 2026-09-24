@@ -53,6 +53,8 @@ class State:
         self.job_queue = None          # queue.Queue, créée par jobs.start_worker()
         self.torch_info = None         # cache
         self.gguf_job = None           # job GGUF en cours (le CLI n'admet qu'une instance)
+        self.gguf_free = threading.Event()  # signale la liberation du moteur C++
+        self.gguf_free.set()
         self.gguf_backend = None       # "GPU (Metal)" ou "CPU" : backend du dernier run GGUF
 
 
